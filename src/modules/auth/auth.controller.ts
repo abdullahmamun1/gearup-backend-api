@@ -5,6 +5,6 @@ const registerUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {},
 );
 
-export const userController = {
+export const authController = {
   registerUser,
 };

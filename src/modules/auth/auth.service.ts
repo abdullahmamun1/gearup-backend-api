@@ -1,5 +1,5 @@
 const registerUser = async () => {};
 
-export const userService = {
+export const authService = {
   registerUser,
 };
