@@ -1,0 +1,23 @@
+model RentalOrder {
+  id     String       @id @default(uuid())
+  status RentalStatus @default(PLACED)
+
+  startDate DateTime
+  endDate   DateTime
+
+  totalAmount Decimal @db.Decimal(10, 2)
+
+  customerId String
+  customer   User   @relation("CustomerOrders", fields: [customerId], references: [id])
+
+  items    OrderItem[]
+  payments Payment[]
+  review   Review?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@map("rental_orders")
+}

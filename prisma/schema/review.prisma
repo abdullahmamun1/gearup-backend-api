@@ -1,0 +1,19 @@
+model Review {
+  id      String  @id @default(uuid())
+  rating  Int
+  comment String?
+
+  customerId String
+  customer   User   @relation("CustomerReviews", fields: [customerId], references: [id])
+
+  gearItemId String
+  gearItem   GearItem @relation(fields: [gearItemId], references: [id])
+
+  rentalOrderId String      @unique
+  rentalOrder   RentalOrder @relation(fields: [rentalOrderId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([gearItemId])
+  @@map("reviews")
+}

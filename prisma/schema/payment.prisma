@@ -1,0 +1,21 @@
+model Payment {
+  id            String         @id @default(uuid())
+  transactionId String         @unique // Stripe payment intent / charge id
+  amount        Decimal        @db.Decimal(10, 2)
+  gateway       PaymentGateway @default(STRIPE)
+  status        PaymentStatus  @default(PENDING)
+  paidAt        DateTime?
+
+  rentalOrderId String
+  rentalOrder   RentalOrder @relation(fields: [rentalOrderId], references: [id])
+
+  customerId String
+  customer   User   @relation("CustomerPayments", fields: [customerId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([rentalOrderId])
+  @@index([customerId])
+  @@map("payments")
+}
