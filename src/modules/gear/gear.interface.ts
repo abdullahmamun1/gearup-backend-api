@@ -20,3 +20,13 @@ export interface IAddGearItemPayload {
   stock: number;
   categoryId: string;
 }
+export interface IUpdateGearItemPayload {
+  name?: string;
+  description?: string;
+  brand?: string;
+  imageUrl?: string;
+  pricePerDay?: number;
+  stock?: number;
+  isAvailable?: boolean;
+  categoryId?: string;
+}

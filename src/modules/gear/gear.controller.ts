@@ -18,18 +18,6 @@ const getAllCategories = catchAsync(
   },
 );
 
-const addGearItem = catchAsync(
-  async (req: Request, res: Response, next: NextFunction) => {
-    const payload = req.body;
-    const result = await gearService.addGearItem(req.user!.id, payload);
-    sendResponse(res, {
-      success: true,
-      statusCode: httpStatus.CREATED,
-      message: "Gear item added successfully",
-      data: result,
-    });
-  },
-);
 const getAllGearItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
@@ -57,10 +45,54 @@ const getGearItemById = catchAsync(
     });
   },
 );
-
+const addGearItem = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const payload = req.body;
+    const result = await gearService.addGearItem(req.user!.id, payload);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Gear item added successfully",
+      data: result,
+    });
+  },
+);
+const updateGearItem = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const payload = req.body;
+    const { gearId } = req.params;
+    const providerId = req.user!.id;
+    const result = await gearService.updateGearItem(
+      providerId,
+      gearId as string,
+      payload,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Gear item updated successfully",
+      data: result,
+    });
+  },
+);
+const deleteGearItem = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { gearId } = req.params;
+    const providerId = req.user!.id;
+    await gearService.deleteGearItem(providerId, gearId as string);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Gear item deleted successfully",
+      data: null,
+    });
+  },
+);
 export const gearController = {
   getAllCategories,
   getAllGearItems,
   getGearItemById,
   addGearItem,
+  updateGearItem,
+  deleteGearItem,
 };
