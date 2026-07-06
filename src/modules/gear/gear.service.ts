@@ -174,7 +174,7 @@ const deleteGearItem = async (providerId: string, gearId: string) => {
   const activeOrderCount = await prisma.orderItem.count({
     where: {
       gearItemId: gearId,
-      rentalOrders: {
+      rentalOrder: {
         status: { in: ["PLACED", "CONFIRMED", "PAID", "PICKED_UP"] },
       },
     },
