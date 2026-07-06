@@ -18,6 +18,18 @@ const getAllCategories = catchAsync(
   },
 );
 
+const addGearItem = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const payload = req.body;
+    const result = await gearService.addGearItem(req.user!.id, payload);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.CREATED,
+      message: "Gear item added successfully",
+      data: result,
+    });
+  },
+);
 const getAllGearItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
@@ -50,4 +62,5 @@ export const gearController = {
   getAllCategories,
   getAllGearItems,
   getGearItemById,
+  addGearItem,
 };

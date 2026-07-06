@@ -5,6 +5,7 @@ import { prisma } from "../../../lib/prisma";
 import { safeUserSelect } from "../../utils/userSelect";
 import { jwtUtils } from "../../utils/jwt";
 import { SignOptions } from "jsonwebtoken";
+import { createError } from "../../utils/createError";
 
 const registerUser = async (payload: ICreateUserPayload) => {
   const { name, email, password, phone, role } = payload;
@@ -39,7 +40,13 @@ const loginUser = async (payload: ILoginPayload) => {
   });
   const isPasswordMatched = await bcrypt.compare(password, user.passwordHash);
   if (!isPasswordMatched) {
-    throw new Error("Password is incorrect!");
+    throw createError(400, "Password is incorrect!");
+  }
+  if (user.status === "SUSPENDED") {
+    throw createError(
+      403,
+      "User account is suspended. Please contact support.",
+    );
   }
   const jwtPayload = {
     id: user.id,
@@ -51,12 +58,12 @@ const loginUser = async (payload: ILoginPayload) => {
   const accessToken = jwtUtils.createToken(
     jwtPayload,
     config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions,
+    config.jwt_access_expires_in as SignOptions["expiresIn"],
   );
   const refreshToken = jwtUtils.createToken(
     jwtPayload,
     config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions,
+    config.jwt_refresh_expires_in as SignOptions["expiresIn"],
   );
 
   return {

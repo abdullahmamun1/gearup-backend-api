@@ -10,3 +10,13 @@ export interface IGearQueryParams {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }
+
+export interface IAddGearItemPayload {
+  name: string;
+  description?: string;
+  brand?: string;
+  imageUrl?: string;
+  pricePerDay: number;
+  stock: number;
+  categoryId: string;
+}

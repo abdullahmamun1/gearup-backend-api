@@ -5,6 +5,7 @@ import { jwtUtils } from "../utils/jwt";
 import config from "../config";
 import { JwtPayload } from "jsonwebtoken";
 import { prisma } from "../../lib/prisma";
+import { createError } from "../utils/createError";
 
 declare global {
   namespace Express {
@@ -27,34 +28,37 @@ export const auth = (...requiredRoles: Role[]) => {
         ? req.headers.authorization?.split(" ")[1]
         : req.headers.authorization;
     if (!token) {
-      throw new Error("No token provided");
+      throw createError(401, "No token provided");
     }
     const verifiedToken = jwtUtils.verifyToken(token, config.jwt_access_secret);
 
     if (!verifiedToken.success) {
-      throw new Error(verifiedToken.error);
+      throw createError(401, verifiedToken.error);
     }
-    const { id, name, email, role } = verifiedToken.data as JwtPayload;
-    if (requiredRoles.length && !requiredRoles.includes(role)) {
-      throw new Error("You do not have permission to access this resource");
-    }
+    const { id } = verifiedToken.data as JwtPayload;
     const user = await prisma.user.findUnique({
       where: {
         id,
       },
     });
     if (!user) {
-      throw new Error("User not found");
+      throw createError(404, "User not found");
     }
     if (user.status === "SUSPENDED") {
-      throw new Error("Your account is suspended");
+      throw createError(403, "Your account is suspended");
+    }
+    if (requiredRoles.length && !requiredRoles.includes(user.role)) {
+      throw createError(
+        403,
+        "You do not have permission to access this resource",
+      );
     }
 
     req.user = {
-      id,
-      name,
-      email,
-      role,
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
     };
 
     next();

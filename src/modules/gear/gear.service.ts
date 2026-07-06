@@ -1,7 +1,28 @@
 import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../../lib/prisma";
-import { IGearQueryParams } from "./gear.interface";
+import { createError } from "../../utils/createError";
+import { IGearQueryParams, IAddGearItemPayload } from "./gear.interface";
 
+const addGearItem = async (
+  providerId: string,
+  payload: IAddGearItemPayload,
+) => {
+  const category = await prisma.category.findUnique({
+    where: {
+      id: payload.categoryId,
+    },
+  });
+  if (!category) {
+    throw createError(400, "Category not found");
+  }
+  const result = await prisma.gearItem.create({
+    data: {
+      ...payload,
+      providerId,
+    },
+  });
+  return result;
+};
 const getAllGearItems = async (query: IGearQueryParams) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
@@ -85,7 +106,7 @@ const getAllGearItems = async (query: IGearQueryParams) => {
   };
 };
 const getGearItemById = async (gearId: string) => {
-  const gearItem = await prisma.gearItem.findUnique({
+  const gearItem = await prisma.gearItem.findUniqueOrThrow({
     where: {
       id: gearId,
     },
@@ -106,4 +127,5 @@ const getGearItemById = async (gearId: string) => {
 export const gearService = {
   getAllGearItems,
   getGearItemById,
+  addGearItem,
 };

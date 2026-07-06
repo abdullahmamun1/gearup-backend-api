@@ -4,13 +4,14 @@ import { catchAsync } from "../../utils/catchAsync";
 import { authService } from "./auth.service";
 import { sendResponse } from "../../utils/sendResponse";
 import { Role } from "../../../generated/prisma/enums";
+import { createError } from "../../utils/createError";
 
 const registerUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
     const allowedRoles = [Role.CUSTOMER, Role.PROVIDER];
     if (!allowedRoles.includes(payload.role)) {
-      throw new Error("Invalid Role!!");
+      throw createError(400, "Invalid Role!!");
     }
     const result = await authService.registerUser(payload);
     sendResponse(res, {

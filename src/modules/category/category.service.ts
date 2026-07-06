@@ -18,8 +18,13 @@ const getAllCategories = async () => {
 };
 
 const updateCategory = async (payload: ICreateCategoryPayload, id: string) => {
+  await prisma.category.findUniqueOrThrow({
+    where: {
+      id,
+    },
+  });
   const { name, description } = payload;
-  const category = await prisma.category.update({
+  const result = await prisma.category.update({
     where: {
       id,
     },
@@ -28,9 +33,14 @@ const updateCategory = async (payload: ICreateCategoryPayload, id: string) => {
       description,
     },
   });
-  return category;
+  return result;
 };
 const deleteCategory = async (id: string) => {
+  await prisma.category.findUniqueOrThrow({
+    where: {
+      id,
+    },
+  });
   await prisma.category.delete({
     where: {
       id,
