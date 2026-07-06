@@ -64,8 +64,18 @@ const loginUser = async (payload: ILoginPayload) => {
     refreshToken,
   };
 };
+const getLoggedInUser = async (userId: string) => {
+  const user = await prisma.user.findUniqueOrThrow({
+    where: {
+      id: userId,
+    },
+    select: safeUserSelect,
+  });
+  return user;
+};
 
 export const authService = {
   registerUser,
   loginUser,
+  getLoggedInUser,
 };

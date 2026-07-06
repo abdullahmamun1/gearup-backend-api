@@ -47,8 +47,21 @@ const loginUser = catchAsync(
     });
   },
 );
+const getLoggedInUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user?.id;
+    const user = await authService.getLoggedInUser(userId as string);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "User data retrieved successfully",
+      data: user,
+    });
+  },
+);
 
 export const authController = {
   registerUser,
   loginUser,
+  getLoggedInUser,
 };
