@@ -1,5 +1,5 @@
 import { GearItemWhereInput } from "../../../generated/prisma/models";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import {
   IGearQueryParams,

@@ -4,7 +4,7 @@ import { catchAsync } from "../utils/catchAsync";
 import { jwtUtils } from "../utils/jwt";
 import config from "../config";
 import { JwtPayload } from "jsonwebtoken";
-import { prisma } from "../../lib/prisma";
+import { prisma } from "../lib/prisma";
 import { createError } from "../utils/createError";
 
 declare global {

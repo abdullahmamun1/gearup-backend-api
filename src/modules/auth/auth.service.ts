@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import { ICreateUserPayload, ILoginPayload } from "./auth.interface";
 import config from "../../config";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { safeUserSelect } from "../../utils/userSelect";
 import { jwtUtils } from "../../utils/jwt";
 import { SignOptions } from "jsonwebtoken";

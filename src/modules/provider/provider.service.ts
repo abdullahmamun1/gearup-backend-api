@@ -1,5 +1,5 @@
 import { RentalStatus } from "../../../generated/prisma/enums";
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { IProviderOrderQueryParams } from "./provider.interface";
 

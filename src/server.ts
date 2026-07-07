@@ -1,7 +1,7 @@
 import app from "./app";
 import "dotenv/config";
 import config from "./config";
-import { prisma } from "../lib/prisma";
+import { prisma } from "./lib/prisma";
 
 const PORT = config.port;
 

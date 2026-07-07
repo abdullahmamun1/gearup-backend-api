@@ -1,4 +1,4 @@
-import { prisma } from "../../../lib/prisma";
+import { prisma } from "../../lib/prisma";
 import { ICreateCategoryPayload } from "./category.interface";
 
 const createCategory = async (payload: ICreateCategoryPayload) => {

@@ -9,8 +9,11 @@ import { adminRoutes } from "./modules/admin/admin.route";
 import { gearRoutes } from "./modules/gear/gear.route";
 import { providerRoutes } from "./modules/provider/provider.route";
 import { rentalRoutes } from "./modules/rental/rental.route";
+import { paymentRoutes } from "./modules/payment/paymet.route";
 
 const app: Application = express();
+
+app.use("/api/payments/confirm", express.raw({ type: "application/json" }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -27,6 +30,7 @@ app.get("/", (req: Request, res: Response) => {
 });
 
 app.use("/api/", gearRoutes);
+app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/provider", providerRoutes);
 app.use("/api/rental", rentalRoutes);
