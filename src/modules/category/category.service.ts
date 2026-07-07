@@ -35,6 +35,7 @@ const updateCategory = async (payload: ICreateCategoryPayload, id: string) => {
   });
   return result;
 };
+
 const deleteCategory = async (id: string) => {
   await prisma.category.findUniqueOrThrow({
     where: {
@@ -47,6 +48,7 @@ const deleteCategory = async (id: string) => {
     },
   });
 };
+
 export const categoryService = {
   createCategory,
   updateCategory,

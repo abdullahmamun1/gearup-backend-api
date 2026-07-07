@@ -117,6 +117,7 @@ const getRentalOrders = async (
     },
   };
 };
+
 const getRentalOrderById = async (
   orderId: string,
   customerId: string,
@@ -146,6 +147,7 @@ const getRentalOrderById = async (
   }
   return order;
 };
+
 const cancelRentalOrder = async (customerId: string, orderId: string) => {
   const transaction = await prisma.$transaction(async (tx) => {
     const order = await tx.rentalOrder.findUnique({

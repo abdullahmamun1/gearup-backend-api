@@ -89,6 +89,7 @@ const getAllGearItems = async (query: IGearQueryParams) => {
     },
   };
 };
+
 const getGearItemById = async (gearId: string) => {
   const gearItem = await prisma.gearItem.findUniqueOrThrow({
     where: {
@@ -107,6 +108,7 @@ const getGearItemById = async (gearId: string) => {
   });
   return gearItem;
 };
+
 const addGearItem = async (
   providerId: string,
   payload: IAddGearItemPayload,
@@ -127,6 +129,7 @@ const addGearItem = async (
   });
   return result;
 };
+
 const getGearOwnedInfo = async (providerId: string, gearId: string) => {
   const gearItem = await prisma.gearItem.findUnique({
     where: {
@@ -144,6 +147,7 @@ const getGearOwnedInfo = async (providerId: string, gearId: string) => {
   }
   return gearItem;
 };
+
 const updateGearItem = async (
   providerId: string,
   gearId: string,
@@ -169,6 +173,7 @@ const updateGearItem = async (
   });
   return result;
 };
+
 const deleteGearItem = async (providerId: string, gearId: string) => {
   await getGearOwnedInfo(providerId, gearId);
   const activeOrderCount = await prisma.orderItem.count({

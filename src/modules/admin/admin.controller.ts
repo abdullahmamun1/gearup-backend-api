@@ -16,6 +16,7 @@ const createCategory = catchAsync(
     });
   },
 );
+
 const updateCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;

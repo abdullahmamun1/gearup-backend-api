@@ -22,6 +22,7 @@ const registerUser = catchAsync(
     });
   },
 );
+
 const loginUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
@@ -48,6 +49,7 @@ const loginUser = catchAsync(
     });
   },
 );
+
 const getLoggedInUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?.id;

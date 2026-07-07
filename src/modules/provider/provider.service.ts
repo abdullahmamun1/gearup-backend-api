@@ -64,18 +64,17 @@ const getProviderOrders = async (
   };
 };
 
-const ALLOWED_TRANSITIONS: Record<string, string[]> = {
-  PLACED: ["CONFIRMED"],
-  CONFIRMED: [],
-  PAID: ["PICKED_UP"],
-  PICKED_UP: ["RETURNED"],
-};
-
 const updateOrderStatus = async (
   providerId: string,
   orderId: string,
   nextStatus: RentalStatus,
 ) => {
+  const ALLOWED_TRANSITIONS: Record<string, string[]> = {
+    PLACED: ["CONFIRMED"],
+    CONFIRMED: [],
+    PAID: ["PICKED_UP"],
+    PICKED_UP: ["RETURNED"],
+  };
   const order = await prisma.rentalOrder.findUnique({
     where: {
       id: orderId,

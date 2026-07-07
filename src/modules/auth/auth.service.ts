@@ -31,6 +31,7 @@ const registerUser = async (payload: ICreateUserPayload) => {
   });
   return user;
 };
+
 const loginUser = async (payload: ILoginPayload) => {
   const { email, password } = payload;
   const user = await prisma.user.findUniqueOrThrow({
@@ -71,6 +72,7 @@ const loginUser = async (payload: ILoginPayload) => {
     refreshToken,
   };
 };
+
 const getLoggedInUser = async (userId: string) => {
   const user = await prisma.user.findUniqueOrThrow({
     where: {

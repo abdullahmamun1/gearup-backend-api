@@ -72,6 +72,7 @@ const cancelOrder = catchAsync(
     });
   },
 );
+
 export const rentalController = {
   createOrder,
   getOrders,

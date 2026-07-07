@@ -10,6 +10,7 @@ router.get(
   auth(Role.PROVIDER),
   providerController.getProviderOrders,
 );
+
 router.patch(
   "/orders/:orderId",
   auth(Role.PROVIDER),

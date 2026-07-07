@@ -33,6 +33,7 @@ const getAllGearItems = catchAsync(
     });
   },
 );
+
 const getGearItemById = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { gearId } = req.params;
@@ -45,6 +46,7 @@ const getGearItemById = catchAsync(
     });
   },
 );
+
 const addGearItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
@@ -57,6 +59,7 @@ const addGearItem = catchAsync(
     });
   },
 );
+
 const updateGearItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
@@ -75,6 +78,7 @@ const updateGearItem = catchAsync(
     });
   },
 );
+
 const deleteGearItem = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const { gearId } = req.params;
@@ -88,6 +92,7 @@ const deleteGearItem = catchAsync(
     });
   },
 );
+
 export const gearController = {
   getAllCategories,
   getAllGearItems,
