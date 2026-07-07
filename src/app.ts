@@ -8,6 +8,7 @@ import { notFound } from "./middleware/notFound";
 import { adminRoutes } from "./modules/admin/admin.route";
 import { gearRoutes } from "./modules/gear/gear.route";
 import { providerRoutes } from "./modules/provider/provider.route";
+import { rentalRoutes } from "./modules/rental/rental.route";
 
 const app: Application = express();
 
@@ -28,6 +29,7 @@ app.get("/", (req: Request, res: Response) => {
 app.use("/api/", gearRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/provider", providerRoutes);
+app.use("/api/rental", rentalRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use(notFound);
