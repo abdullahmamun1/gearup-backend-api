@@ -1,11 +1,22 @@
+import Stripe from "stripe";
 import { prisma } from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
+import config from "../../config";
+import { paymentUtils } from "./payment.util";
 
-const createPaymentIntent = async (orderId: string, customerId: string) => {
+const createCheckoutSession = async (orderId: string, customerId: string) => {
   const order = await prisma.rentalOrder.findUnique({
     where: {
       id: orderId,
+    },
+    include: {
+      customer: {
+        select: {
+          name: true,
+          email: true,
+        },
+      },
     },
   });
   if (!order) {
@@ -28,19 +39,32 @@ const createPaymentIntent = async (orderId: string, customerId: string) => {
     const intent = await stripe.paymentIntents.retrieve(
       existingPending.transactionId,
     );
-    return { clientSecret: intent.client_secret, payment: existingPending };
+    return { paymentUrl: sessionStorage.url, payment: existingPending };
   }
 
   const amountInCents = Math.round(Number(order.totalAmount) * 100);
-  const intent = await stripe.paymentIntents.create({
-    amount: amountInCents,
-    currency: "bdt",
+  const session = await stripe.checkout.sessions.create({
+    mode: "payment",
+    payment_method_types: ["card"],
+    customer_email: order.customer.email,
+    line_items: [
+      {
+        price_data: {
+          currency: "bdt",
+          product_data: { name: `GearUp Rental Order ${order.id}` },
+          unit_amount: amountInCents,
+        },
+        quantity: 1,
+      },
+    ],
     metadata: { rentalOrderId: order.id, customerId },
+    success_url: `${config.app_url}/payment-success?orderId=${order.id}`,
+    cancel_url: `${config.app_url}/payment-cancelled?orderId=${order.id}`,
   });
 
   const payment = await prisma.payment.create({
     data: {
-      transactionId: intent.id,
+      transactionId: session.id,
       amount: order.totalAmount,
       gateway: "STRIPE",
       status: "PENDING",
@@ -48,12 +72,31 @@ const createPaymentIntent = async (orderId: string, customerId: string) => {
       customerId,
     },
   });
-  return { clientSecret: intent.client_secret, payment };
+  return { paymentUrl: session.url, payment };
 };
 
-const handleWebhookEvent = async () => {};
+const handleWebhookEvent = async (payload: Buffer, signature: string) => {
+  let event: Stripe.Event;
+  try {
+    const endpointSecret = config.stripe_webhook_secret;
+    event = stripe.webhooks.constructEvent(payload, signature, endpointSecret);
+    console.log(event);
+  } catch (err) {
+    throw createError(400, `Webhook signature verification failed`);
+  }
+  switch (event.type) {
+    case "checkout.session.completed":
+      await paymentUtils.handleSessionCompleted(event.data.object);
+      break;
+    case "checkout.session.expired":
+      await paymentUtils.handleSessionExpired(event.data.object);
+      break;
+  }
+
+  return { received: true };
+};
 
 export const paymentService = {
-  createPaymentIntent,
+  createCheckoutSession,
   handleWebhookEvent,
 };
