@@ -1,6 +1,10 @@
+import { RentalStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { createError } from "../../utils/createError";
-import { ICreateRentalOrderInput } from "./rental.interface";
+import {
+  ICreateRentalOrderInput,
+  IGetOrderQueryParams,
+} from "./rental.interface";
 
 const createRentalOrder = async (
   customerId: string,
@@ -80,11 +84,38 @@ const createRentalOrder = async (
   return transaction;
 };
 
-const getRentalOrders = async (customerId: string) => {
+const getRentalOrders = async (
+  customerId: string,
+  query: IGetOrderQueryParams,
+) => {
+  const page = query.page ? Number(query.page) : 1;
+  const limit = query.limit ? Number(query.limit) : 10;
+  const skip = (page - 1) * limit;
+
   const orders = await prisma.rentalOrder.findMany({
-    where: { customerId },
+    where: {
+      customerId,
+      status: query.status ? (query.status as RentalStatus) : undefined,
+    },
+    skip,
+    take: limit,
+    orderBy: { createdAt: "desc" },
+    include: { items: { include: { gearItem: true } } },
   });
-  return orders;
+  const totalCount = await prisma.rentalOrder.count({
+    where: {
+      customerId,
+      status: query.status ? (query.status as RentalStatus) : undefined,
+    },
+  });
+  return {
+    data: orders,
+    meta: {
+      page: limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
 };
 
 export const rentalService = {

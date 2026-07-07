@@ -3,6 +3,7 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { rentalService } from "./rental.service";
+import { IGetOrderQueryParams } from "./rental.interface";
 
 const createOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -21,7 +22,11 @@ const createOrder = catchAsync(
 const getOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const customerId = req.user!.id;
-    const orders = await rentalService.getRentalOrders(customerId);
+    const query = req.query;
+    const orders = await rentalService.getRentalOrders(
+      customerId,
+      query as IGetOrderQueryParams,
+    );
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
