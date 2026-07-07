@@ -130,8 +130,26 @@ const getCustomerPayments = async (
   };
 };
 
+const getPaymentsbyId = async (customerId: string, paymentId: string) => {
+  const payment = await prisma.payment.findUnique({
+    where: {
+      customerId,
+      id: paymentId,
+    },
+    include: { rentalOrder: true },
+  });
+  if (!payment) {
+    throw createError(404, "Payment Not Found");
+  }
+  if (payment.customerId !== customerId) {
+    throw createError(403, "You do not own this payment");
+  }
+  return payment;
+};
+
 export const paymentService = {
   createCheckoutSession,
   handleWebhookEvent,
   getCustomerPayments,
+  getPaymentsbyId,
 };
