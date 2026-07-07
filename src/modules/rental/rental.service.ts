@@ -1,4 +1,4 @@
-import { RentalStatus } from "../../../generated/prisma/enums";
+import { RentalStatus, Role } from "../../../generated/prisma/enums";
 import { prisma } from "../../../lib/prisma";
 import { createError } from "../../utils/createError";
 import {
@@ -117,8 +117,38 @@ const getRentalOrders = async (
     },
   };
 };
+const getRentalOrderById = async (
+  orderId: string,
+  customerId: string,
+  customerRole: Role,
+) => {
+  const order = await prisma.rentalOrder.findUnique({
+    where: {
+      id: orderId,
+    },
+    include: {
+      items: { include: { gearItem: true } },
+      payments: true,
+      customer: { select: { id: true, name: true, email: true } },
+    },
+  });
+  if (!order) {
+    throw createError(404, "Rental Order not found");
+  }
+
+  const isOwner = order.customerId == customerId;
+  const isAdmin = customerRole === "ADMIN";
+  const isInvolvedProvider = order.items.some(
+    (item) => item.gearItem.providerId === customerId,
+  );
+  if (!isAdmin && !isOwner && !isInvolvedProvider) {
+    throw createError(403, "You do not have access to this order");
+  }
+  return order;
+};
 
 export const rentalService = {
   createRentalOrder,
   getRentalOrders,
+  getRentalOrderById,
 };

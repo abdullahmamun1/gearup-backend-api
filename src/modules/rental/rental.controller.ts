@@ -4,6 +4,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { rentalService } from "./rental.service";
 import { IGetOrderQueryParams } from "./rental.interface";
+import { Role } from "../../../generated/prisma/enums";
 
 const createOrder = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -36,7 +37,27 @@ const getOrders = catchAsync(
   },
 );
 
+const getOrderById = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const customerId = req.user!.id;
+    const customerRole = req.user!.role;
+    const { orderId } = req.params;
+    const order = await rentalService.getRentalOrderById(
+      orderId as string,
+      customerId as string,
+      customerRole as Role,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Rental order retrieved successfully",
+      data: order,
+    });
+  },
+);
+
 export const rentalController = {
   createOrder,
   getOrders,
+  getOrderById,
 };
