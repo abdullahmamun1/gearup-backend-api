@@ -38,8 +38,25 @@ const confirmPayment = catchAsync(
     });
   },
 );
+const getMyPayments = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const customerId = req.user?.id;
+    const query = req.query;
+    const result = await paymentService.getCustomerPayments(
+      customerId as string,
+      query,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Payment history retrieved successfully",
+      data: result,
+    });
+  },
+);
 
 export const paymentController = {
   createPayment,
   confirmPayment,
+  getMyPayments,
 };

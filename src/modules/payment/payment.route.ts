@@ -8,4 +8,6 @@ const router = Router();
 router.post("/confirm", paymentController.confirmPayment);
 router.post("/create", auth(Role.CUSTOMER), paymentController.createPayment);
 
+router.get("/", auth(Role.CUSTOMER), paymentController.getMyPayments);
+
 export const paymentRoutes = router;

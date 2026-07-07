@@ -4,6 +4,7 @@ import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
 import config from "../../config";
 import { paymentUtils } from "./payment.util";
+import { IGetPaymentsQueryParams } from "./payment.interface";
 
 const createCheckoutSession = async (orderId: string, customerId: string) => {
   const order = await prisma.rentalOrder.findUnique({
@@ -96,7 +97,41 @@ const handleWebhookEvent = async (payload: Buffer, signature: string) => {
   return { received: true };
 };
 
+const getCustomerPayments = async (
+  customerId: string,
+  query: IGetPaymentsQueryParams,
+) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+
+  const payments = await prisma.payment.findMany({
+    where: {
+      customerId,
+    },
+    take: limit,
+    skip,
+    orderBy: { createdAt: "desc" },
+    include: { rentalOrder: true },
+  });
+  const totalCount = await prisma.payment.count({
+    where: {
+      customerId,
+    },
+  });
+  return {
+    data: payments,
+    meta: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+
 export const paymentService = {
   createCheckoutSession,
   handleWebhookEvent,
+  getCustomerPayments,
 };
