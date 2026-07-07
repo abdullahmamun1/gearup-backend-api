@@ -146,9 +146,47 @@ const getRentalOrderById = async (
   }
   return order;
 };
+const cancelRentalOrder = async (customerId: string, orderId: string) => {
+  const transaction = await prisma.$transaction(async (tx) => {
+    const order = await tx.rentalOrder.findUnique({
+      where: {
+        id: orderId,
+      },
+      include: {
+        items: true,
+      },
+    });
+    if (!order) {
+      throw createError(404, "Rental Order not found");
+    }
+    if (order.customerId !== customerId) {
+      throw createError(403, "You do not own this order");
+    }
+    if (order.status !== "PLACED") {
+      throw createError(
+        400,
+        `Cannot cancel an order in ${order.status} status`,
+      );
+    }
+    for (const item of order.items) {
+      await tx.gearItem.update({
+        where: { id: item.gearItemId },
+        data: { stock: { increment: item.quantity } },
+      });
+    }
+    const updatedOrder = tx.rentalOrder.update({
+      where: { id: orderId },
+      data: { status: "CANCELLED" },
+    });
+    return updatedOrder;
+  });
+
+  return transaction;
+};
 
 export const rentalService = {
   createRentalOrder,
   getRentalOrders,
   getRentalOrderById,
+  cancelRentalOrder,
 };
