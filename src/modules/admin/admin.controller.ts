@@ -53,6 +53,19 @@ const getAllGear = catchAsync(
   },
 );
 
+const getAllRentals = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+    const result = await adminService.getAllRentals(query);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Rental orders retrieved successfully",
+      data: result,
+    });
+  },
+);
+
 const createCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
@@ -100,6 +113,7 @@ export const adminController = {
   getAllUsers,
   updateUserStatus,
   getAllGear,
+  getAllRentals,
   createCategory,
   updateCategory,
   deleteCategory,

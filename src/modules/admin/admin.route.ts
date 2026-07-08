@@ -11,6 +11,7 @@ router.get("/users", adminController.getAllUsers);
 router.patch("/users/:userId", adminController.updateUserStatus);
 
 router.get("/gear", adminController.getAllGear);
+router.get("/rentals", adminController.getAllRentals);
 
 router.post("/category", adminController.createCategory);
 router.patch("/category/:categoryId", adminController.updateCategory);
