@@ -1,4 +1,6 @@
+import { UserStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
+import { createError } from "../../utils/createError";
 import { safeUserSelect } from "../../utils/userSelect";
 import { IGetUsersQueryParams } from "./admin.interface";
 
@@ -32,7 +34,33 @@ const getAllUsers = async (query: IGetUsersQueryParams) => {
     },
   };
 };
+const updateUserStatus = async (
+  targetUserId: string,
+  requesterId: string,
+  status: UserStatus,
+) => {
+  if (![UserStatus.ACTIVE, UserStatus.SUSPENDED].includes(status)) {
+    throw createError(400, "Status must be ACTIVE or SUSPENDED");
+  }
+  if (targetUserId === requesterId) {
+    throw createError(400, "You cannot change your own account status");
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: targetUserId },
+  });
+  if (!targetUser) {
+    throw createError(404, "User not found");
+  }
+  const updatedUser = await prisma.user.update({
+    where: { id: targetUserId },
+    data: { status },
+    select: safeUserSelect,
+  });
+  return updatedUser;
+};
 
 export const adminService = {
   getAllUsers,
+  updateUserStatus,
 };

@@ -4,6 +4,7 @@ import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { categoryService } from "../category/category.service";
 import { adminService } from "./admin.service";
+import { createError } from "../../utils/createError";
 
 const getAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -13,6 +14,27 @@ const getAllUsers = catchAsync(
       success: true,
       statusCode: httpStatus.OK,
       message: "Users retrieved successfully",
+      data: result,
+    });
+  },
+);
+const updateUserStatus = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const status = req.body;
+    if (!status) {
+      throw createError(400, "Status is required");
+    }
+    const { userId } = req.params;
+    const adminId = req.user?.id;
+    const result = await adminService.updateUserStatus(
+      userId as string,
+      adminId as string,
+      status,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "User status updated successfully",
       data: result,
     });
   },
@@ -63,6 +85,7 @@ const deleteCategory = catchAsync(
 
 export const adminController = {
   getAllUsers,
+  updateUserStatus,
   createCategory,
   updateCategory,
   deleteCategory,
