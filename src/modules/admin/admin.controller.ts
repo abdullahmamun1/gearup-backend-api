@@ -40,6 +40,19 @@ const updateUserStatus = catchAsync(
   },
 );
 
+const getAllGear = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+    const result = await adminService.getAllGear(query);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Gear listings retrieved successfully",
+      data: result,
+    });
+  },
+);
+
 const createCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
@@ -86,6 +99,7 @@ const deleteCategory = catchAsync(
 export const adminController = {
   getAllUsers,
   updateUserStatus,
+  getAllGear,
   createCategory,
   updateCategory,
   deleteCategory,

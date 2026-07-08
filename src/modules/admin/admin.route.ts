@@ -10,6 +10,8 @@ router.use(auth(Role.ADMIN));
 router.get("/users", adminController.getAllUsers);
 router.patch("/users/:userId", adminController.updateUserStatus);
 
+router.get("/gear", adminController.getAllGear);
+
 router.post("/category", adminController.createCategory);
 router.patch("/category/:categoryId", adminController.updateCategory);
 router.delete("/category/:categoryId", adminController.deleteCategory);
