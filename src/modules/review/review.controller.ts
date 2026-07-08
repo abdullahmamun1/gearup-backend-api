@@ -14,8 +14,25 @@ const createReview = catchAsync(
     );
     sendResponse(res, {
       success: true,
-      statusCode: httpStatus.OK,
+      statusCode: httpStatus.CREATED,
       message: "Review submitted successfully",
+      data: result,
+    });
+  },
+);
+
+const getReviewsForGear = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+    const { gearId } = req.params;
+    const result = await reviewService.getReviewsForGear(
+      gearId as string,
+      query,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Reviews retrieved successfully",
       data: result,
     });
   },
@@ -23,4 +40,5 @@ const createReview = catchAsync(
 
 export const reviewController = {
   createReview,
+  getReviewsForGear,
 };

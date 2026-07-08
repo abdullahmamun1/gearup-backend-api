@@ -1,11 +1,11 @@
 import { RentalStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
-import { IProviderOrderQueryParams } from "./provider.interface";
+import { IGetQueryParams } from "./provider.interface";
 
 const getProviderOrders = async (
   providerId: string,
-  query: IProviderOrderQueryParams,
+  query: IGetQueryParams,
 ) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;

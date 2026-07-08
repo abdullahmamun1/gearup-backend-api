@@ -21,13 +21,6 @@ export interface IAddGearItemPayload {
   categoryId: string;
 }
 
-export interface IUpdateGearItemPayload {
-  name?: string;
-  description?: string;
-  brand?: string;
-  imageUrl?: string;
-  pricePerDay?: number;
-  stock?: number;
+export type IUpdateGearItemPayload = Partial<IAddGearItemPayload> & {
   isAvailable?: boolean;
-  categoryId?: string;
-}
+};

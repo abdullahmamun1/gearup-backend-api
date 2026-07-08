@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
+import { IGetQueryParams } from "../provider/provider.interface";
 import { ICreateReviewInput } from "./review.interface";
 
 const createReview = async (
@@ -63,6 +64,39 @@ const createReview = async (
   return review;
 };
 
+const getReviewsForGear = async (
+  gearItemId: string,
+  query: IGetQueryParams,
+) => {
+  const page = query.page ? Number(query.page) : 1;
+  const limit = query.limit ? Number(query.limit) : 10;
+  const skip = (page - 1) * limit;
+
+  const reviews = await prisma.review.findMany({
+    where: {
+      gearItemId,
+    },
+    skip,
+    take: limit,
+    orderBy: { createdAt: "desc" },
+    include: { customer: { select: { id: true, name: true } } },
+  });
+  const totalCount = await prisma.review.count({
+    where: {
+      gearItemId,
+    },
+  });
+  return {
+    data: reviews,
+    meta: {
+      page: limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+
 export const reviewService = {
   createReview,
+  getReviewsForGear,
 };

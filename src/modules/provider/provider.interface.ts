@@ -1,4 +1,4 @@
-export interface IProviderOrderQueryParams {
+export interface IGetQueryParams {
   page?: string;
   limit?: string;
 }
