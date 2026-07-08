@@ -5,18 +5,12 @@ import { auth } from "../../middleware/auth";
 
 const router = Router();
 
-router.post("/category", auth(Role.ADMIN), adminController.createCategory);
+router.use(auth(Role.ADMIN));
 
-router.patch(
-  "/category/:categoryId",
-  auth(Role.ADMIN),
-  adminController.updateCategory,
-);
+router.get("/users", adminController.getAllUsers);
 
-router.delete(
-  "/category/:categoryId",
-  auth(Role.ADMIN),
-  adminController.deleteCategory,
-);
+router.post("/category", adminController.createCategory);
+router.patch("/category/:categoryId", adminController.updateCategory);
+router.delete("/category/:categoryId", adminController.deleteCategory);
 
 export const adminRoutes = router;

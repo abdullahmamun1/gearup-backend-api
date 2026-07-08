@@ -89,7 +89,8 @@ const getReviewsForGear = async (
   return {
     data: reviews,
     meta: {
-      page: limit,
+      page,
+      limit,
       total: totalCount,
       totalPages: Math.ceil(totalCount / limit),
     },

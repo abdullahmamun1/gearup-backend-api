@@ -111,7 +111,8 @@ const getRentalOrders = async (
   return {
     data: orders,
     meta: {
-      page: limit,
+      page,
+      limit,
       total: totalCount,
       totalPages: Math.ceil(totalCount / limit),
     },

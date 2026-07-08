@@ -3,6 +3,20 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
 import { categoryService } from "../category/category.service";
+import { adminService } from "./admin.service";
+
+const getAllUsers = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const query = req.query;
+    const result = await adminService.getAllUsers(query);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Users retrieved successfully",
+      data: result,
+    });
+  },
+);
 
 const createCategory = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -48,6 +62,7 @@ const deleteCategory = catchAsync(
 );
 
 export const adminController = {
+  getAllUsers,
   createCategory,
   updateCategory,
   deleteCategory,

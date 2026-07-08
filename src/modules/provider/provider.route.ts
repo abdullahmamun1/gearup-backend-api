@@ -5,16 +5,9 @@ import { Role } from "../../../generated/prisma/client";
 
 const router = Router();
 
-router.get(
-  "/orders",
-  auth(Role.PROVIDER),
-  providerController.getProviderOrders,
-);
+router.use(auth(Role.PROVIDER));
 
-router.patch(
-  "/orders/:orderId",
-  auth(Role.PROVIDER),
-  providerController.updateOrderStatus,
-);
+router.get("/orders", providerController.getProviderOrders);
+router.patch("/orders/:orderId", providerController.updateOrderStatus);
 
 export const providerRoutes = router;
