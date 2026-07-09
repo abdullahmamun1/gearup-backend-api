@@ -37,6 +37,12 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
   }
 
   const amountInCents = Math.round(Number(order.totalAmount) * 100);
+  if (Number(order.totalAmount) < 65) {
+    throw createError(
+      400,
+      "Order amount is too low to process payment. Minimum order amount is ৳65.",
+    );
+  }
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
@@ -74,7 +80,6 @@ const handleWebhookEvent = async (payload: Buffer, signature: string) => {
   try {
     const endpointSecret = config.stripe_webhook_secret;
     event = stripe.webhooks.constructEvent(payload, signature, endpointSecret);
-    console.log(event);
   } catch (err) {
     throw createError(400, `Webhook signature verification failed`);
   }

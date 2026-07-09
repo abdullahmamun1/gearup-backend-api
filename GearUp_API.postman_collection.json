@@ -1,8 +1,8 @@
 {
   "info": {
-    "_postman_id": "80193877-7add-4638-914c-4092922b08bd",
+    "_postman_id": "081dbb37-2d74-480d-97a2-23f61f35d9b7",
     "name": "GearUp API",
-    "description": "Full flow: register -> login -> categories -> gear -> rental order -> payment -> review -> admin oversight.\n\nRun requests top to bottom within each folder.\n\nAdmin account cannot self-register then fill in adminEmail/adminPassword variables before running the Admin folder.",
+    "description": "Full flow: register -> login -> categories -> gear -> rental order -> payment -> review -> admin oversight.\n\nRun requests top to bottom within each folder. Tokens and IDs are auto-captured into collection variables by each request's Tests script, so later requests don't need manual copy-pasting.\n\nAdmin account cannot self-register (by design) -- seed one directly in the DB, then fill in adminEmail/adminPassword variables before running the Admin folder.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "51744086"
   },
@@ -17,11 +17,13 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('customerToken', json.data.token);",
+                  "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -35,7 +37,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Customer\",\n  \"email\": \"customer1@gmail.com\",\n  \"password\": \"12345\",\n  \"phone\": \"+8801700000000\",\n  \"role\": \"CUSTOMER\"\n}"
+              "raw": "{\n  \"name\": \"Test Customer\",\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"+8801700000000\",\n  \"role\": \"CUSTOMER\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -57,11 +59,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -75,7 +75,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Provider\",\n  \"email\": \"provider1@gmail.com\",\n  \"password\": \"12345\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PROVIDER\"\n}"
+              "raw": "{\n  \"name\": \"Test Provider\",\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{password}}\",\n  \"phone\": \"+8801700000001\",\n  \"role\": \"PROVIDER\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/register",
@@ -97,11 +97,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('customerToken', json.data.token || json.data.accessToken);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -115,7 +115,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"customer1@gmail.com\",\n  \"password\": \"12345\"\n}"
+              "raw": "{\n  \"email\": \"{{customerEmail}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -137,11 +137,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('providerToken', json.data.token || json.data.accessToken);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -155,7 +155,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"provider1@gmail.com\",\n  \"password\": \"12345\"\n}"
+              "raw": "{\n  \"email\": \"{{providerEmail}}\",\n  \"password\": \"{{password}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/auth/login",
@@ -177,22 +177,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "pm.collectionVariables.set('adminToken', json.data.token || json.data.accessToken);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -222,17 +211,15 @@
           "response": []
         },
         {
-          "name": "Get Me",
+          "name": "Get Me (Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -269,18 +256,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
-                ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "exec": [
-                  ""
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) pm.collectionVariables.set('categoryId', json.data.id);"
                 ],
                 "type": "text/javascript",
                 "packages": {},
@@ -302,7 +280,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Camping\",\n  \"description\": \"Tents, sleeping bags, and camp gear\"\n}"
+              "raw": "{\n  \"name\": \"Camping11\",\n  \"description\": \"Tents, sleeping bags, and camp gear\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/admin/category",
@@ -324,11 +302,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -354,7 +330,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
                 "type": "text/javascript",
                 "packages": {},
@@ -379,14 +355,14 @@
               "raw": "{\n  \"description\": \"Tents, sleeping bags, camp stoves, and more\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/category/b058433f-4bac-4b2f-bc22-f0866a50cf4d",
+              "raw": "{{baseUrl}}/admin/category/{{categoryId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
                 "category",
-                "b058433f-4bac-4b2f-bc22-f0866a50cf4d"
+                "{{categoryId}}"
               ]
             }
           },
@@ -408,9 +384,7 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) pm.collectionVariables.set('gearId', json.data.id);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -428,7 +402,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"4-Person Tent\",\n  \"description\": \"Waterproof dome tent, easy setup\",\n  \"brand\": \"Coleman\",\n  \"pricePerDay\": 15.00,\n  \"stock\": 5,\n  \"categoryId\": \"b058433f-4bac-4b2f-bc22-f0866a50cf4d\"\n}"
+              "raw": "{\n  \"name\": \"4-Person Tent\",\n  \"description\": \"Waterproof dome tent, easy setup\",\n  \"brand\": \"Coleman\",\n  \"pricePerDay\": 15.00,\n  \"stock\": 5,\n  \"categoryId\": \"{{categoryId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/provider/gear",
@@ -462,7 +436,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/gear?category=b058433f-4bac-4b2f-bc22-f0866a50cf4d&minPrice=5&maxPrice=50&page=1&limit=10&sortBy=pricePerDay&sortOrder=asc",
+              "raw": "{{baseUrl}}/gear?page=1&limit=10&sortBy=pricePerDay&sortOrder=asc",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -472,15 +446,18 @@
               "query": [
                 {
                   "key": "category",
-                  "value": "b058433f-4bac-4b2f-bc22-f0866a50cf4d"
+                  "value": "{{categoryId}}",
+                  "disabled": true
                 },
                 {
                   "key": "minPrice",
-                  "value": "5"
+                  "value": "5",
+                  "disabled": true
                 },
                 {
                   "key": "maxPrice",
-                  "value": "50"
+                  "value": "50",
+                  "disabled": true
                 },
                 {
                   "key": "page",
@@ -539,11 +516,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -584,11 +559,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 403 (role) or 401', () => {",
+                  "  pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -606,17 +581,17 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"pricePerDay\": 1999\n}"
+              "raw": "{\n  \"pricePerDay\": 999\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/provider/gear/{{wrongGearId}}",
+              "raw": "{{baseUrl}}/provider/gear/{{gearId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "provider",
                 "gear",
-                "{{wrongGearId}}"
+                "{{gearId}}"
               ]
             }
           },
@@ -634,11 +609,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) pm.collectionVariables.set('rentalOrderId', json.data.id);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -677,11 +652,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -712,11 +685,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -748,11 +719,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -793,11 +762,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 400 (cannot cancel non-PLACED order)', () => pm.response.to.have.status(400));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -829,17 +796,19 @@
       "name": "5. Payments (Stripe)",
       "item": [
         {
-          "name": "Create Payment Intent (Customer)",
+          "name": "Create Payment Session(Customer)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.payment && json.data.payment.id) {",
+                  "  pm.collectionVariables.set('paymentId', json.data.payment.id);",
+                  "}"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -857,7 +826,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"orderId\": \"{{rentalOrderId}}\"\n}"
+              "raw": "{\n  \"rentalOrderId\": \"{{rentalOrderId}}\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/payments/create",
@@ -879,11 +848,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -914,11 +881,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -938,6 +903,37 @@
               "path": [
                 "payments",
                 "{{paymentId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "NOTE - Webhook confirm (use Stripe CLI, not this collection)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// POST /payments/confirm requires a real Stripe signature header.",
+                  "// Test it with: stripe listen --forward-to localhost:5000/api/payments/confirm",
+                  "// then: stripe trigger payment_intent.succeeded",
+                  "// Postman cannot fake a valid Stripe signature, so this is a placeholder only."
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments"
               ]
             }
           },
@@ -1016,11 +1012,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 400 until order reaches RETURNED', () => pm.response.to.have.status(400));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1059,11 +1053,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1090,17 +1082,15 @@
       "name": "8. Provider - Orders",
       "item": [
         {
-          "name": "Get Orders (Provider)",
+          "name": "Get Incoming Orders (Provider)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1128,7 +1118,7 @@
       ]
     },
     {
-      "name": "8. Admin",
+      "name": "9. Admin",
       "item": [
         {
           "name": "Get All Users (Admin)",
@@ -1137,17 +1127,10 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) pm.collectionVariables.set('targetUserId', json.data[0].id);"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
-              }
-            },
-            {
-              "listen": "prerequest",
-              "script": {
-                "packages": {},
                 "type": "text/javascript"
               }
             }
@@ -1180,11 +1163,11 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200 or 400 (self-suspend guard)', () => {",
+                  "  pm.expect([200, 400]).to.include(pm.response.code);",
+                  "});"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1205,14 +1188,14 @@
               "raw": "{\n  \"status\": \"SUSPENDED\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/admin/users/9ad616b4-b85a-4e0d-b7b0-72481bfda526",
+              "raw": "{{baseUrl}}/admin/users/{{targetUserId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "admin",
                 "users",
-                "9ad616b4-b85a-4e0d-b7b0-72481bfda526"
+                "{{targetUserId}}"
               ]
             }
           },
@@ -1225,11 +1208,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1261,11 +1242,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
                 ],
-                "type": "text/javascript",
-                "packages": {},
-                "requests": {}
+                "type": "text/javascript"
               }
             }
           ],
@@ -1297,7 +1276,9 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  ""
+                  "pm.test('Status is 409 (FK constraint) or 200 (if no gear left)', () => {",
+                  "  pm.expect([200, 409]).to.include(pm.response.code);",
+                  "});"
                 ],
                 "type": "text/javascript",
                 "packages": {},
@@ -1357,7 +1338,39 @@
   "variable": [
     {
       "key": "baseUrl",
+      "value": "http://localhost:5000/api"
+    },
+    {
+      "key": "customerToken",
+      "secret": true
+    },
+    {
+      "key": "providerToken",
+      "secret": true
+    },
+    {
+      "key": "adminToken",
+      "secret": true
+    },
+    {
+      "key": "customerEmail",
+      "value": "customer1@example.com"
+    },
+    {
+      "key": "providerEmail",
+      "value": "provider1@example.com"
+    },
+    {
+      "key": "adminEmail",
       "value": ""
+    },
+    {
+      "key": "adminPassword",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": "Password123!"
     },
     {
       "key": "categoryId",
@@ -1365,10 +1378,6 @@
     },
     {
       "key": "gearId",
-      "value": ""
-    },
-    {
-      "key": "wrongGearId",
       "value": ""
     },
     {
@@ -1380,11 +1389,15 @@
       "value": ""
     },
     {
-      "key": "adminEmail",
+      "key": "reviewId",
       "value": ""
     },
     {
-      "key": "adminPassword",
+      "key": "targetUserId",
+      "value": ""
+    },
+    {
+      "key": "wrongGearId",
       "value": ""
     }
   ]

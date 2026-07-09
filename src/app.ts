@@ -27,16 +27,16 @@ app.use(
 );
 
 app.get("/", (req: Request, res: Response) => {
-  res.send("Hello, World!!!");
+  res.send("GearUp API is running");
 });
 
 app.use("/api/", gearRoutes);
 app.use("/api/", reviewRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/provider", providerRoutes);
 app.use("/api/rentals", rentalRoutes);
-app.use("/api/admin", adminRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);
