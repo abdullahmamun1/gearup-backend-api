@@ -44,8 +44,8 @@ const updateUserStatus = async (
   requesterId: string,
   status: UserStatus,
 ) => {
-  if (![UserStatus.ACTIVE, UserStatus.SUSPENDED].includes(status)) {
-    throw createError(400, "Status must be ACTIVE or SUSPENDED");
+  if (!["ACTIVE", "SUSPENDED"].includes(status)) {
+    throw createError(400, "status must be ACTIVE or SUSPENDED");
   }
   if (targetUserId === requesterId) {
     throw createError(400, "You cannot change your own account status");

@@ -20,7 +20,7 @@ const getAllUsers = catchAsync(
 );
 const updateUserStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const status = req.body;
+    const { status } = req.body;
     if (!status) {
       throw createError(400, "Status is required");
     }

@@ -11,14 +11,7 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
     where: {
       id: orderId,
     },
-    include: {
-      customer: {
-        select: {
-          name: true,
-          email: true,
-        },
-      },
-    },
+    include: { customer: { select: { email: true, name: true } } },
   });
   if (!order) {
     throw createError(404, "Rental Order not found");
@@ -37,10 +30,10 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
     },
   });
   if (existingPending) {
-    const intent = await stripe.paymentIntents.retrieve(
+    const session = await stripe.checkout.sessions.retrieve(
       existingPending.transactionId,
     );
-    return { paymentUrl: sessionStorage.url, payment: existingPending };
+    return { paymentUrl: session.url, payment: existingPending };
   }
 
   const amountInCents = Math.round(Number(order.totalAmount) * 100);

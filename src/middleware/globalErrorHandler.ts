@@ -12,7 +12,10 @@ export const globalErrorHandler = (
   let errorMessage = err.message || "Internal Server Error";
   let errorName = err.name || "Internal Server Error";
 
-  if (err instanceof Prisma.PrismaClientValidationError) {
+  if (typeof err.statusCode === "number") {
+    statusCode = err.statusCode;
+    errorMessage = err.message;
+  } else if (err instanceof Prisma.PrismaClientValidationError) {
     statusCode = httpStatus.BAD_REQUEST;
     errorMessage = "You have provided incorrect field type or missing fields";
   } else if (err instanceof Prisma.PrismaClientKnownRequestError) {

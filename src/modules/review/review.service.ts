@@ -8,7 +8,7 @@ const createReview = async (
   payload: ICreateReviewInput,
 ) => {
   const { rentalOrderId, gearItemId, rating, comment } = payload;
-  if (!rentalOrderId || !gearItemId || rating) {
+  if (!rentalOrderId || !gearItemId || !rating) {
     throw createError(400, "rentalOrderId, gearItemId & rating are required");
   }
   if (typeof rating !== "number" || rating < 1 || rating > 5) {

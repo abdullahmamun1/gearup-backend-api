@@ -9,6 +9,7 @@ const createPayment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const customerId = req.user?.id;
     const { orderId } = req.body;
+    if (!orderId) throw createError(400, "rentalOrderId is required");
     const result = await paymentService.createCheckoutSession(
       orderId as string,
       customerId as string,
@@ -16,7 +17,7 @@ const createPayment = catchAsync(
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.CREATED,
-      message: "Payment intent created successfully",
+      message: "Payment session created successfully",
       data: result,
     });
   },
