@@ -50,6 +50,36 @@ const loginUser = catchAsync(
   },
 );
 
+const refreshToken = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.cookies.refreshToken
+      ? req.cookies.refreshToken
+      : req.headers.authorization?.startsWith("Bearer ")
+        ? req.headers.authorization?.split(" ")[1]
+        : req.headers.authorization;
+
+    if (!token) {
+      throw createError(401, "No refresh token provided");
+    }
+
+    const { accessToken } = await authService.refreshToken(token);
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: false,
+      sameSite: "none",
+      maxAge: 1000 * 60 * 60 * 24,
+    });
+
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Access token is retrieved succesfully",
+      data: { accessToken },
+    });
+  },
+);
+
 const getLoggedInUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user?.id;
@@ -66,5 +96,6 @@ const getLoggedInUser = catchAsync(
 export const authController = {
   registerUser,
   loginUser,
+  refreshToken,
   getLoggedInUser,
 };

@@ -4,7 +4,7 @@ import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { safeUserSelect } from "../../utils/userSelect";
 import { jwtUtils } from "../../utils/jwt";
-import { SignOptions } from "jsonwebtoken";
+import { JwtPayload, SignOptions } from "jsonwebtoken";
 import { createError } from "../../utils/createError";
 
 const registerUser = async (payload: ICreateUserPayload) => {
@@ -73,6 +73,46 @@ const loginUser = async (payload: ILoginPayload) => {
   };
 };
 
+const refreshToken = async (token: string) => {
+  const verifiedToken = jwtUtils.verifyToken(token, config.jwt_refresh_secret);
+  if (!verifiedToken.success) {
+    throw createError(401, "Refresh token is invalid or expired");
+  }
+
+  const { id } = verifiedToken.data as JwtPayload;
+  const user = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+  });
+  if (!user) {
+    throw createError(404, "User not found");
+  }
+  if (user.status === "SUSPENDED") {
+    throw createError(
+      403,
+      "User account is suspended. Please contact support.",
+    );
+  }
+
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  const accessToken = jwtUtils.createToken(
+    jwtPayload,
+    config.jwt_access_secret,
+    config.jwt_access_expires_in as SignOptions["expiresIn"],
+  );
+
+  return {
+    accessToken,
+  };
+};
+
 const getLoggedInUser = async (userId: string) => {
   const user = await prisma.user.findUniqueOrThrow({
     where: {
@@ -86,5 +126,6 @@ const getLoggedInUser = async (userId: string) => {
 export const authService = {
   registerUser,
   loginUser,
+  refreshToken,
   getLoggedInUser,
 };
