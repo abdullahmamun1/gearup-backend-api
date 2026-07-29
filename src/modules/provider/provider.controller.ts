@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
-import { IProviderOrderQueryParams } from "./provider.interface";
 import { providerService } from "./provider.service";
 import { sendResponse } from "../../utils/sendResponse";
+import { IGetQueryParams } from "./provider.interface";
 
 const getProviderOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -11,7 +11,7 @@ const getProviderOrders = catchAsync(
     const query = req.query;
     const orders = await providerService.getProviderOrders(
       providerId,
-      query as IProviderOrderQueryParams,
+      query as IGetQueryParams,
     );
     sendResponse(res, {
       success: true,

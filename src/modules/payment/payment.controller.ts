@@ -9,7 +9,6 @@ const createPayment = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const customerId = req.user?.id;
     const { orderId } = req.body;
-    if (!orderId) throw createError(400, "rentalOrderId is required");
     const result = await paymentService.createCheckoutSession(
       orderId as string,
       customerId as string,
