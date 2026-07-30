@@ -22,6 +22,7 @@ router.get(
   gearController.getGearItemById,
 );
 router.get("/categories", gearController.getAllCategories);
+router.get("/brands", gearController.getAllBrands);
 
 router.get(
   "/provider/gear",

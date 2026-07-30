@@ -18,6 +18,18 @@ const getAllCategories = catchAsync(
   },
 );
 
+const getAllBrands = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const brands = await gearService.getAllBrands();
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Brands retrieved successfully",
+      data: brands,
+    });
+  },
+);
+
 const getAllGearItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const query = req.query;
@@ -110,6 +122,7 @@ const deleteGearItem = catchAsync(
 
 export const gearController = {
   getAllCategories,
+  getAllBrands,
   getAllGearItems,
   getGearItemById,
   getProviderGearItems,

@@ -113,6 +113,18 @@ const getGearItemById = async (gearId: string) => {
   return gearItem;
 };
 
+const getAllBrands = async () => {
+  const rows = await prisma.gearItem.findMany({
+    where: { brand: { not: null } },
+    distinct: ["brand"],
+    select: { brand: true },
+    orderBy: { brand: "asc" },
+  });
+  return rows
+    .map((row) => row.brand?.trim())
+    .filter((brand): brand is string => Boolean(brand));
+};
+
 const getProviderGearItems = async (
   providerId: string,
   query: IProviderGearQueryParams,
@@ -249,6 +261,7 @@ const deleteGearItem = async (providerId: string, gearId: string) => {
 export const gearService = {
   getAllGearItems,
   getGearItemById,
+  getAllBrands,
   getProviderGearItems,
   addGearItem,
   updateGearItem,
