@@ -17,8 +17,7 @@ const getProviderOrders = catchAsync(
       success: true,
       statusCode: httpStatus.OK,
       message: "Provider orders retrieved successfully",
-      data: orders.data,
-      meta: orders.meta,
+      data: orders,
     });
   },
 );

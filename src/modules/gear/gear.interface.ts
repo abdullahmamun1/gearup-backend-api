@@ -11,6 +11,16 @@ export interface IGearQueryParams {
   sortOrder?: "asc" | "desc";
 }
 
+export interface IProviderGearQueryParams {
+  searchTerm?: string;
+  category?: string;
+  isAvailable?: string;
+  page?: string;
+  limit?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
+
 export interface IAddGearItemPayload {
   name: string;
   description?: string;

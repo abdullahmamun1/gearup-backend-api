@@ -4,6 +4,7 @@ import { createError } from "../../utils/createError";
 import {
   IGearQueryParams,
   IAddGearItemPayload,
+  IProviderGearQueryParams,
   IUpdateGearItemPayload,
 } from "./gear.interface";
 
@@ -109,6 +110,54 @@ const getGearItemById = async (gearId: string) => {
   return gearItem;
 };
 
+const getProviderGearItems = async (
+  providerId: string,
+  query: IProviderGearQueryParams,
+) => {
+  const limit = query.limit ? Number(query.limit) : 10;
+  const page = query.page ? Number(query.page) : 1;
+  const skip = (page - 1) * limit;
+  const sortBy = query.sortBy || "createdAt";
+  const sortOrder = query.sortOrder || "desc";
+
+  const where: GearItemWhereInput = { providerId };
+
+  if (query.searchTerm) {
+    where.OR = [
+      { name: { contains: query.searchTerm, mode: "insensitive" } },
+      { brand: { contains: query.searchTerm, mode: "insensitive" } },
+    ];
+  }
+  if (query.category) {
+    where.categoryId = query.category;
+  }
+  if (query.isAvailable !== undefined) {
+    where.isAvailable = query.isAvailable === "true";
+  }
+
+  const gearItems = await prisma.gearItem.findMany({
+    where,
+    take: limit,
+    skip,
+    orderBy: { [sortBy]: sortOrder },
+    include: {
+      category: true,
+      _count: { select: { orderItems: true, reviews: true } },
+    },
+  });
+  const totalCount = await prisma.gearItem.count({ where });
+
+  return {
+    data: gearItems,
+    meta: {
+      page,
+      limit,
+      total: totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+    },
+  };
+};
+
 const addGearItem = async (
   providerId: string,
   payload: IAddGearItemPayload,
@@ -197,6 +246,7 @@ const deleteGearItem = async (providerId: string, gearId: string) => {
 export const gearService = {
   getAllGearItems,
   getGearItemById,
+  getProviderGearItems,
   addGearItem,
   updateGearItem,
   deleteGearItem,

@@ -4,7 +4,7 @@ import { sendResponse } from "../../utils/sendResponse";
 import { catchAsync } from "../../utils/catchAsync";
 import { categoryService } from "../category/category.service";
 import { gearService } from "./gear.service";
-import { IGearQueryParams } from "./gear.interface";
+import { IGearQueryParams, IProviderGearQueryParams } from "./gear.interface";
 
 const getAllCategories = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -28,8 +28,7 @@ const getAllGearItems = catchAsync(
       success: true,
       statusCode: httpStatus.OK,
       message: "Gear items retrieved successfully",
-      data: gearItems.data,
-      meta: gearItems.meta,
+      data: gearItems,
     });
   },
 );
@@ -43,6 +42,22 @@ const getGearItemById = catchAsync(
       statusCode: httpStatus.OK,
       message: "Gear item retrieved successfully",
       data: gearItem,
+    });
+  },
+);
+
+const getProviderGearItems = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const providerId = req.user!.id;
+    const result = await gearService.getProviderGearItems(
+      providerId,
+      req.query as IProviderGearQueryParams,
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Your gear items retrieved successfully",
+      data: result,
     });
   },
 );
@@ -97,6 +112,7 @@ export const gearController = {
   getAllCategories,
   getAllGearItems,
   getGearItemById,
+  getProviderGearItems,
   addGearItem,
   updateGearItem,
   deleteGearItem,

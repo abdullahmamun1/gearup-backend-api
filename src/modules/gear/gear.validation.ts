@@ -64,8 +64,16 @@ const gearQuery = z.object({
   ...paginationQueryFields,
 });
 
+/** No price or brand filters — a provider is searching their own catalogue. */
+const providerGearQuery = gearQuery.omit({
+  brand: true,
+  minPrice: true,
+  maxPrice: true,
+});
+
 export const gearValidation = {
   addGearItem,
   updateGearItem,
   gearQuery,
+  providerGearQuery,
 };

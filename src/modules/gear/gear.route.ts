@@ -18,6 +18,13 @@ router.get(
 router.get("/gear/:gearId", gearController.getGearItemById);
 router.get("/categories", gearController.getAllCategories);
 
+router.get(
+  "/provider/gear",
+  auth(Role.PROVIDER),
+  validateQuery(gearValidation.providerGearQuery),
+  gearController.getProviderGearItems,
+);
+
 router.post(
   "/provider/gear",
   auth(Role.PROVIDER),
