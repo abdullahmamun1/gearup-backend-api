@@ -92,7 +92,7 @@ const getAllGearItems = async (query: IGearQueryParams) => {
 };
 
 const getGearItemById = async (gearId: string) => {
-  const gearItem = await prisma.gearItem.findUniqueOrThrow({
+  const gearItem = await prisma.gearItem.findUnique({
     where: {
       id: gearId,
     },
@@ -107,6 +107,9 @@ const getGearItemById = async (gearId: string) => {
       },
     },
   });
+  if (!gearItem) {
+    throw createError(404, "Gear item not found");
+  }
   return gearItem;
 };
 

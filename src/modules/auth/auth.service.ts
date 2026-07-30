@@ -34,14 +34,15 @@ const registerUser = async (payload: ICreateUserPayload) => {
 
 const loginUser = async (payload: ILoginPayload) => {
   const { email, password } = payload;
-  const user = await prisma.user.findUniqueOrThrow({
+  const user = await prisma.user.findUnique({
     where: {
       email,
     },
   });
-  const isPasswordMatched = await bcrypt.compare(password, user.passwordHash);
-  if (!isPasswordMatched) {
-    throw createError(400, "Password is incorrect!");
+  const isPasswordMatched =
+    user && (await bcrypt.compare(password, user.passwordHash));
+  if (!user || !isPasswordMatched) {
+    throw createError(400, "Email or password is incorrect!");
   }
   if (user.status === "SUSPENDED") {
     throw createError(

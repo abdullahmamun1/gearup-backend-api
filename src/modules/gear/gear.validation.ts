@@ -42,6 +42,8 @@ const updateGearItem = z
     error: "Provide at least one field to update",
   });
 
+const gearIdParam = z.object({ gearId: uuidField("Gear ID") });
+
 const gearQuery = z.object({
   searchTerm: z.string().trim().max(100).optional(),
   category: uuidField("Category").optional(),
@@ -74,6 +76,7 @@ const providerGearQuery = gearQuery.omit({
 export const gearValidation = {
   addGearItem,
   updateGearItem,
+  gearIdParam,
   gearQuery,
   providerGearQuery,
 };

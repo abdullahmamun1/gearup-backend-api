@@ -3,6 +3,7 @@ import { gearController } from "./gear.controller";
 import { auth } from "../../middleware/auth";
 import { Role } from "../../../generated/prisma/client";
 import {
+  validateParams,
   validateQuery,
   validateRequest,
 } from "../../middleware/validateRequest";
@@ -15,7 +16,11 @@ router.get(
   validateQuery(gearValidation.gearQuery),
   gearController.getAllGearItems,
 );
-router.get("/gear/:gearId", gearController.getGearItemById);
+router.get(
+  "/gear/:gearId",
+  validateParams(gearValidation.gearIdParam),
+  gearController.getGearItemById,
+);
 router.get("/categories", gearController.getAllCategories);
 
 router.get(
@@ -35,6 +40,7 @@ router.post(
 router.put(
   "/provider/gear/:gearId",
   auth(Role.PROVIDER),
+  validateParams(gearValidation.gearIdParam),
   validateRequest(gearValidation.updateGearItem),
   gearController.updateGearItem,
 );
@@ -42,6 +48,7 @@ router.put(
 router.delete(
   "/provider/gear/:gearId",
   auth(Role.PROVIDER),
+  validateParams(gearValidation.gearIdParam),
   gearController.deleteGearItem,
 );
 
