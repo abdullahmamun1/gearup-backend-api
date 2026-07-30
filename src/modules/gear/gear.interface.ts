@@ -26,6 +26,7 @@ export interface IAddGearItemPayload {
   description?: string;
   brand?: string;
   imageUrl?: string;
+  images?: string[];
   pricePerDay: number;
   stock: number;
   categoryId: string;

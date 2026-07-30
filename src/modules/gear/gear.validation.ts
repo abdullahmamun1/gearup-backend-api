@@ -22,6 +22,10 @@ const gearItemFields = {
     .max(80, "Brand must be at most 80 characters")
     .optional(),
   imageUrl: z.url("Image URL must be a valid URL").optional(),
+  images: z
+    .array(z.url("Each gallery image must be a valid URL"))
+    .max(8, "A listing can have at most 8 gallery images")
+    .optional(),
   pricePerDay: z
     .number("Price per day must be a number")
     .positive("Price per day must be greater than 0")

@@ -3,7 +3,10 @@ model GearItem {
   name        String
   description String?
   brand       String?
+  /// Cover image, used in cards and listings.
   imageUrl    String?
+  /// Extra gallery shots shown on the detail page, after the cover.
+  images      String[] @default([])
 
   pricePerDay Decimal @db.Decimal(10, 2)
   stock       Int     @default(1)
