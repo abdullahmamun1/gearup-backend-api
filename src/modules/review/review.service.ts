@@ -81,11 +81,15 @@ const getReviewsForGear = async (
     orderBy: { createdAt: "desc" },
     include: { customer: { select: { id: true, name: true } } },
   });
-  const totalCount = await prisma.review.count({
+
+  const stats = await prisma.review.aggregate({
     where: {
       gearItemId,
     },
+    _avg: { rating: true },
+    _count: { rating: true },
   });
+  const totalCount = stats._count.rating;
   return {
     data: reviews,
     meta: {
@@ -93,6 +97,10 @@ const getReviewsForGear = async (
       limit,
       total: totalCount,
       totalPages: Math.ceil(totalCount / limit),
+    },
+    summary: {
+      average: stats._avg.rating,
+      total: totalCount,
     },
   };
 };

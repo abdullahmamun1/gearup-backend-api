@@ -132,6 +132,7 @@ const getRentalOrderById = async (
       items: { include: { gearItem: true } },
       payments: true,
       customer: { select: { id: true, name: true, email: true } },
+      review: true,
     },
   });
   if (!order) {

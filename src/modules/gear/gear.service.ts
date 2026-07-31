@@ -80,8 +80,27 @@ const getAllGearItems = async (query: IGearQueryParams) => {
       AND: andConditions,
     },
   });
+
+  const ratings = await prisma.review.groupBy({
+    by: ["gearItemId"],
+    where: {
+      gearItemId: { in: gearItems.map((item) => item.id) },
+    },
+    _avg: { rating: true },
+    _count: { rating: true },
+  });
+  const ratingByGear = new Map(
+    ratings.map((row) => [
+      row.gearItemId,
+      { average: row._avg.rating, count: row._count.rating },
+    ]),
+  );
+
   return {
-    data: gearItems,
+    data: gearItems.map((item) => ({
+      ...item,
+      rating: ratingByGear.get(item.id) ?? { average: null, count: 0 },
+    })),
     meta: {
       page,
       limit,

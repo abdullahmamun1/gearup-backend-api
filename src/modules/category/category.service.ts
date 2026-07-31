@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma";
+import { createError } from "../../utils/createError";
 import { ICreateCategoryPayload } from "./category.interface";
 
 const createCategory = async (payload: ICreateCategoryPayload) => {
@@ -45,6 +46,17 @@ const deleteCategory = async (id: string) => {
       id,
     },
   });
+  const gearCount = await prisma.gearItem.count({
+    where: {
+      categoryId: id,
+    },
+  });
+  if (gearCount > 0) {
+    throw createError(
+      400,
+      `Cannot delete a category with ${gearCount} listing${gearCount === 1 ? "" : "s"}`,
+    );
+  }
   await prisma.category.delete({
     where: {
       id,
