@@ -110,7 +110,9 @@ const getCustomerPayments = async (
     take: limit,
     skip,
     orderBy: { createdAt: "desc" },
-    include: { rentalOrder: true },
+    include: {
+      rentalOrder: { include: { items: { include: { gearItem: true } } } },
+    },
   });
   const totalCount = await prisma.payment.count({
     where: {
@@ -134,7 +136,9 @@ const getPaymentsbyId = async (customerId: string, paymentId: string) => {
       customerId,
       id: paymentId,
     },
-    include: { rentalOrder: true },
+    include: {
+      rentalOrder: { include: { items: { include: { gearItem: true } } } },
+    },
   });
   if (!payment) {
     throw createError(404, "Payment Not Found");

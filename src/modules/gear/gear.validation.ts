@@ -21,7 +21,9 @@ const gearItemFields = {
     .trim()
     .max(80, "Brand must be at most 80 characters")
     .optional(),
-  imageUrl: z.url("Image URL must be a valid URL").optional(),
+  imageUrl: z
+    .union([z.literal(""), z.url("Image URL must be a valid URL")])
+    .optional(),
   images: z
     .array(z.url("Each gallery image must be a valid URL"))
     .max(8, "A listing can have at most 8 gallery images")
