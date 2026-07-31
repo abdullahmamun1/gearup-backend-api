@@ -9,6 +9,8 @@ export const numericQueryField = (label: string) =>
     .regex(/^\d+(\.\d+)?$/, `${label} must be a number`)
     .optional();
 
+export const MAX_PAGE_SIZE = 100;
+
 export const paginationQueryFields = {
   page: z
     .string()
@@ -17,6 +19,10 @@ export const paginationQueryFields = {
   limit: z
     .string()
     .regex(/^[1-9]\d*$/, "Limit must be a positive whole number")
+    .refine(
+      (value) => Number(value) <= MAX_PAGE_SIZE,
+      `Limit must be at most ${MAX_PAGE_SIZE}`,
+    )
     .optional(),
 };
 
