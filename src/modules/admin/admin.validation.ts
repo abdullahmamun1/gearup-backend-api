@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { Role, UserStatus } from "../../../generated/prisma/enums";
+import {
+  RentalStatus,
+  Role,
+  UserStatus,
+} from "../../../generated/prisma/enums";
 import { paginationQueryFields } from "../../utils/validationFields";
 
 const updateUserStatus = z.object({
@@ -33,9 +37,18 @@ const usersQuery = z.object({
   ...paginationQueryFields,
 });
 
+const gearQuery = z.object({ ...paginationQueryFields });
+
+const rentalsQuery = z.object({
+  status: z.enum(RentalStatus, { error: "Unknown rental status" }).optional(),
+  ...paginationQueryFields,
+});
+
 export const adminValidation = {
   updateUserStatus,
   createCategory,
   updateCategory,
   usersQuery,
+  gearQuery,
+  rentalsQuery,
 };

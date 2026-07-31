@@ -23,8 +23,16 @@ router.patch(
   adminController.updateUserStatus,
 );
 
-router.get("/gear", adminController.getAllGear);
-router.get("/rentals", adminController.getAllRentals);
+router.get(
+  "/gear",
+  validateQuery(adminValidation.gearQuery),
+  adminController.getAllGear,
+);
+router.get(
+  "/rentals",
+  validateQuery(adminValidation.rentalsQuery),
+  adminController.getAllRentals,
+);
 
 router.post(
   "/category",
