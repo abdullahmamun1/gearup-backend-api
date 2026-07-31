@@ -13,7 +13,10 @@ const createCategory = async (payload: ICreateCategoryPayload) => {
 };
 
 const getAllCategories = async () => {
-  const categories = await prisma.category.findMany();
+  const categories = await prisma.category.findMany({
+    orderBy: { name: "asc" },
+    include: { _count: { select: { gearItems: true } } },
+  });
   return categories;
 };
 
