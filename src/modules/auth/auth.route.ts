@@ -24,5 +24,11 @@ router.get(
   auth(Role.CUSTOMER, Role.PROVIDER, Role.ADMIN),
   authController.getLoggedInUser,
 );
+router.patch(
+  "/me",
+  auth(Role.CUSTOMER, Role.PROVIDER, Role.ADMIN),
+  validateRequest(authValidation.updateProfile),
+  authController.updateProfile,
+);
 
 export const authRoutes = router;

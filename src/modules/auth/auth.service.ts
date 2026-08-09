@@ -1,5 +1,9 @@
 import bcrypt from "bcryptjs";
-import { ICreateUserPayload, ILoginPayload } from "./auth.interface";
+import {
+  ICreateUserPayload,
+  ILoginPayload,
+  IUpdateProfilePayload,
+} from "./auth.interface";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { safeUserSelect } from "../../utils/userSelect";
@@ -124,9 +128,28 @@ const getLoggedInUser = async (userId: string) => {
   return user;
 };
 
+const updateProfile = async (
+  userId: string,
+  payload: IUpdateProfilePayload,
+) => {
+  const { name, phone } = payload;
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      ...(name !== undefined && { name }),
+      ...(phone !== undefined && { phone: phone === "" ? null : phone }),
+    },
+    select: safeUserSelect,
+  });
+
+  return user;
+};
+
 export const authService = {
   registerUser,
   loginUser,
   refreshToken,
   getLoggedInUser,
+  updateProfile,
 };

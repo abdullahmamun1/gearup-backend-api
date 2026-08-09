@@ -21,4 +21,19 @@ const loginUser = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
-export const authValidation = { registerUser, loginUser };
+const updateProfile = z
+  .object({
+    name: z.string().trim().min(2, "Name must be at least 2 characters"),
+    phone: z
+      .string()
+      .trim()
+      .min(6, "Enter a valid phone number")
+      .max(20, "Enter a valid phone number")
+      .or(z.literal("")),
+  })
+  .partial()
+  .refine((payload) => Object.keys(payload).length > 0, {
+    error: "Provide at least one field to update",
+  });
+
+export const authValidation = { registerUser, loginUser, updateProfile };
