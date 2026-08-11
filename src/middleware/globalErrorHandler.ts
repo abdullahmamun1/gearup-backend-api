@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { ZodError } from "zod";
 import { Prisma } from "../../generated/prisma/client";
+import config from "../config";
 
 export const globalErrorHandler = (
   err: any,
@@ -59,6 +60,6 @@ export const globalErrorHandler = (
     name: errorName,
     message: errorMessage,
     errorDetails,
-    error: err.stack,
+    ...(config.node_env !== "production" && { error: err.stack }),
   });
 };

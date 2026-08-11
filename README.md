@@ -6,6 +6,23 @@ Customers browse gear, place rental orders, and pay via Stripe. Providers list a
 
 ---
 
+## 🔗 Live & repositories
+
+|                   |                                                     |
+| ----------------- | --------------------------------------------------- |
+| Backend API       | https://gear-up-backend-two.vercel.app              |
+| Frontend          | https://gear-up-frontend-chi.vercel.app             |
+| Backend repo      | https://github.com/abdullahmamun1/gearup-backend-api |
+| **Frontend repo** | https://github.com/abdullahmamun1/gearUp-frontend   |
+
+The client for this API lives in a separate repository —
+[**gearUp-frontend**](https://github.com/abdullahmamun1/gearUp-frontend)
+(Next.js 16 App Router · TypeScript · Tailwind v4). It calls this API only from
+the server and stores the JWTs in httpOnly cookies, so `APP_URL` here must match
+its origin for CORS.
+
+---
+
 ## 🛠️ Tech Stack
 
 | Layer     | Technology                                              |
