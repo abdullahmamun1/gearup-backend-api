@@ -21,6 +21,13 @@ const loginUser = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+const googleLogin = z.object({
+  code: z.string().min(1, "Authorization code is required"),
+  codeVerifier: z.string().min(1, "Code verifier is required"),
+  redirectUri: z.url("Redirect URI must be a valid URL"),
+  role: z.enum(Role).exclude(["ADMIN"]).optional(),
+});
+
 const updateProfile = z
   .object({
     name: z.string().trim().min(2, "Name must be at least 2 characters"),
@@ -36,4 +43,9 @@ const updateProfile = z
     error: "Provide at least one field to update",
   });
 
-export const authValidation = { registerUser, loginUser, updateProfile };
+export const authValidation = {
+  registerUser,
+  loginUser,
+  googleLogin,
+  updateProfile,
+};

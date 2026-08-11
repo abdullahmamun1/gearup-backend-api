@@ -1,11 +1,13 @@
 model User {
-  id           String     @id @default(uuid())
-  name         String
-  email        String     @unique
-  passwordHash String
-  phone        String?
-  role         Role
-  status       UserStatus @default(ACTIVE)
+  id    String @id @default(uuid())
+  name  String
+  email String @unique
+  passwordHash String?
+  googleId     String? @unique
+
+  phone  String?
+  role   Role
+  status UserStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

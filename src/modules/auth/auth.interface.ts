@@ -13,6 +13,12 @@ export interface ILoginPayload {
   email: string;
   password: string;
 }
+export interface IGoogleLoginPayload {
+  code: string;
+  codeVerifier: string;
+  redirectUri: string;
+  role?: RegisterRole;
+}
 export interface IUpdateProfilePayload {
   name?: string;
   phone?: string;

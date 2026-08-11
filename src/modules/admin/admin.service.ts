@@ -1,4 +1,5 @@
 import { RentalStatus, UserStatus } from "../../../generated/prisma/enums";
+import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { safeUserSelect } from "../../utils/userSelect";
@@ -7,7 +8,10 @@ import {
   ICreateRentalOrderInput,
   IGetOrderQueryParams,
 } from "../rental/rental.interface";
-import { IGetUsersQueryParams } from "./admin.interface";
+import {
+  IGetAdminGearQueryParams,
+  IGetUsersQueryParams,
+} from "./admin.interface";
 
 const getAllUsers = async (query: IGetUsersQueryParams) => {
   const page = query.page ? Number(query.page) : 1;
@@ -65,12 +69,28 @@ const updateUserStatus = async (
   return updatedUser;
 };
 
-const getAllGear = async (query: IGetQueryParams) => {
+const getAllGear = async (query: IGetAdminGearQueryParams) => {
   const page = query.page ? Number(query.page) : 1;
   const limit = query.limit ? Number(query.limit) : 10;
   const skip = (page - 1) * limit;
 
+  const where: GearItemWhereInput = {};
+
+  if (query.searchTerm) {
+    where.OR = [
+      { name: { contains: query.searchTerm, mode: "insensitive" } },
+      { brand: { contains: query.searchTerm, mode: "insensitive" } },
+    ];
+  }
+  if (query.category) {
+    where.categoryId = query.category;
+  }
+  if (query.isAvailable !== undefined) {
+    where.isAvailable = query.isAvailable === "true";
+  }
+
   const gear = await prisma.gearItem.findMany({
+    where,
     skip,
     take: limit,
     orderBy: { createdAt: "desc" },
@@ -79,7 +99,7 @@ const getAllGear = async (query: IGetQueryParams) => {
       provider: { select: { id: true, name: true, email: true } },
     },
   });
-  const totalCount = await prisma.gearItem.count();
+  const totalCount = await prisma.gearItem.count({ where });
   return {
     data: gear,
     meta: {

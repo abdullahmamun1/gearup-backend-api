@@ -1,26 +1,29 @@
 import { RentalStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
-import { IGetQueryParams } from "./provider.interface";
+import { IGetProviderOrdersQueryParams } from "./provider.interface";
 
 const getProviderOrders = async (
   providerId: string,
-  query: IGetQueryParams,
+  query: IGetProviderOrdersQueryParams,
 ) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
 
-  const orders = await prisma.rentalOrder.findMany({
-    where: {
-      items: {
-        some: {
-          gearItem: {
-            providerId: providerId,
-          },
+  const where = {
+    items: {
+      some: {
+        gearItem: {
+          providerId: providerId,
         },
       },
     },
+    status: query.status ? (query.status as RentalStatus) : undefined,
+  };
+
+  const orders = await prisma.rentalOrder.findMany({
+    where,
     take: limit,
     skip,
     orderBy: {
@@ -41,17 +44,7 @@ const getProviderOrders = async (
       },
     },
   });
-  const totalCount = await prisma.rentalOrder.count({
-    where: {
-      items: {
-        some: {
-          gearItem: {
-            providerId: providerId,
-          },
-        },
-      },
-    },
-  });
+  const totalCount = await prisma.rentalOrder.count({ where });
 
   return {
     data: orders,

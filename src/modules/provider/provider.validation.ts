@@ -6,7 +6,10 @@ const updateOrderStatus = z.object({
   status: z.enum(RentalStatus, { error: "Unknown rental status" }),
 });
 
-const orderQuery = z.object({ ...paginationQueryFields });
+const orderQuery = z.object({
+  status: z.enum(RentalStatus, { error: "Unknown rental status" }).optional(),
+  ...paginationQueryFields,
+});
 
 export const providerValidation = {
   updateOrderStatus,

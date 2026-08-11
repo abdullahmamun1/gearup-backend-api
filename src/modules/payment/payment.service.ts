@@ -1,10 +1,15 @@
 import Stripe from "stripe";
+import { PaymentStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
 import config from "../../config";
 import { paymentUtils } from "./payment.util";
 import { IGetQueryParams } from "../provider/provider.interface";
+
+interface IGetPaymentsQueryParams extends IGetQueryParams {
+  status?: PaymentStatus;
+}
 
 const createCheckoutSession = async (orderId: string, customerId: string) => {
   const order = await prisma.rentalOrder.findUnique({
@@ -97,16 +102,19 @@ const handleWebhookEvent = async (payload: Buffer, signature: string) => {
 
 const getCustomerPayments = async (
   customerId: string,
-  query: IGetQueryParams,
+  query: IGetPaymentsQueryParams,
 ) => {
   const limit = query.limit ? Number(query.limit) : 10;
   const page = query.page ? Number(query.page) : 1;
   const skip = (page - 1) * limit;
 
+  const where = {
+    customerId,
+    status: query.status ? (query.status as PaymentStatus) : undefined,
+  };
+
   const payments = await prisma.payment.findMany({
-    where: {
-      customerId,
-    },
+    where,
     take: limit,
     skip,
     orderBy: { createdAt: "desc" },
@@ -114,11 +122,7 @@ const getCustomerPayments = async (
       rentalOrder: { include: { items: { include: { gearItem: true } } } },
     },
   });
-  const totalCount = await prisma.payment.count({
-    where: {
-      customerId,
-    },
-  });
+  const totalCount = await prisma.payment.count({ where });
   return {
     data: payments,
     meta: {

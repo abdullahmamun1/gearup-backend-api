@@ -4,7 +4,10 @@ import {
   Role,
   UserStatus,
 } from "../../../generated/prisma/enums";
-import { paginationQueryFields } from "../../utils/validationFields";
+import {
+  paginationQueryFields,
+  uuidField,
+} from "../../utils/validationFields";
 
 const updateUserStatus = z.object({
   status: z.enum(UserStatus, {
@@ -37,7 +40,18 @@ const usersQuery = z.object({
   ...paginationQueryFields,
 });
 
-const gearQuery = z.object({ ...paginationQueryFields });
+const gearQuery = z.object({
+  searchTerm: z
+    .string()
+    .trim()
+    .max(100, "Search term must be at most 100 characters")
+    .optional(),
+  category: uuidField("Category ID").optional(),
+  isAvailable: z
+    .enum(["true", "false"], { error: "Availability must be true or false" })
+    .optional(),
+  ...paginationQueryFields,
+});
 
 const rentalsQuery = z.object({
   status: z.enum(RentalStatus, { error: "Unknown rental status" }).optional(),

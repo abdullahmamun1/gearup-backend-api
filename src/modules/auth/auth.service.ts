@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import {
   ICreateUserPayload,
+  IGoogleLoginPayload,
   ILoginPayload,
   IUpdateProfilePayload,
 } from "./auth.interface";
@@ -10,6 +11,41 @@ import { safeUserSelect } from "../../utils/userSelect";
 import { jwtUtils } from "../../utils/jwt";
 import { JwtPayload, SignOptions } from "jsonwebtoken";
 import { createError } from "../../utils/createError";
+import { googleOAuth } from "../../utils/googleOAuth";
+import { UserModel } from "../../../generated/prisma/models";
+
+const issueTokens = (
+  user: Pick<UserModel, "id" | "name" | "email" | "role">,
+) => {
+  const jwtPayload = {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  };
+
+  return {
+    accessToken: jwtUtils.createToken(
+      jwtPayload,
+      config.jwt_access_secret,
+      config.jwt_access_expires_in as SignOptions["expiresIn"],
+    ),
+    refreshToken: jwtUtils.createToken(
+      jwtPayload,
+      config.jwt_refresh_secret,
+      config.jwt_refresh_expires_in as SignOptions["expiresIn"],
+    ),
+  };
+};
+
+const assertNotSuspended = (user: Pick<UserModel, "status">) => {
+  if (user.status === "SUSPENDED") {
+    throw createError(
+      403,
+      "User account is suspended. Please contact support.",
+    );
+  }
+};
 
 const registerUser = async (payload: ICreateUserPayload) => {
   const { name, email, password, phone, role } = payload;
@@ -43,39 +79,55 @@ const loginUser = async (payload: ILoginPayload) => {
       email,
     },
   });
+
+  if (user && !user.passwordHash) {
+    throw createError(
+      400,
+      "This account uses Google sign-in. Continue with Google instead.",
+    );
+  }
+
   const isPasswordMatched =
-    user && (await bcrypt.compare(password, user.passwordHash));
+    user?.passwordHash && (await bcrypt.compare(password, user.passwordHash));
   if (!user || !isPasswordMatched) {
     throw createError(400, "Email or password is incorrect!");
   }
-  if (user.status === "SUSPENDED") {
-    throw createError(
-      403,
-      "User account is suspended. Please contact support.",
-    );
+  assertNotSuspended(user);
+
+  return issueTokens(user);
+};
+
+const loginWithGoogle = async (payload: IGoogleLoginPayload) => {
+  const { code, codeVerifier, redirectUri, role } = payload;
+
+  const profile = await googleOAuth.getProfile(code, codeVerifier, redirectUri);
+
+  let user =
+    (await prisma.user.findUnique({ where: { googleId: profile.googleId } })) ??
+    (await prisma.user.findUnique({ where: { email: profile.email } }));
+
+  if (user) {
+    assertNotSuspended(user);
+
+    if (!user.googleId) {
+      user = await prisma.user.update({
+        where: { id: user.id },
+        data: { googleId: profile.googleId },
+      });
+    }
+  } else {
+    user = await prisma.user.create({
+      data: {
+        name: profile.name,
+        email: profile.email,
+        googleId: profile.googleId,
+        passwordHash: null,
+        role: role ?? "CUSTOMER",
+      },
+    });
   }
-  const jwtPayload = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
 
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions["expiresIn"],
-  );
-  const refreshToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_refresh_secret,
-    config.jwt_refresh_expires_in as SignOptions["expiresIn"],
-  );
-
-  return {
-    accessToken,
-    refreshToken,
-  };
+  return issueTokens(user);
 };
 
 const refreshToken = async (token: string) => {
@@ -93,25 +145,9 @@ const refreshToken = async (token: string) => {
   if (!user) {
     throw createError(404, "User not found");
   }
-  if (user.status === "SUSPENDED") {
-    throw createError(
-      403,
-      "User account is suspended. Please contact support.",
-    );
-  }
+  assertNotSuspended(user);
 
-  const jwtPayload = {
-    id: user.id,
-    name: user.name,
-    email: user.email,
-    role: user.role,
-  };
-
-  const accessToken = jwtUtils.createToken(
-    jwtPayload,
-    config.jwt_access_secret,
-    config.jwt_access_expires_in as SignOptions["expiresIn"],
-  );
+  const { accessToken } = issueTokens(user);
 
   return {
     accessToken,
@@ -149,6 +185,7 @@ const updateProfile = async (
 export const authService = {
   registerUser,
   loginUser,
+  loginWithGoogle,
   refreshToken,
   getLoggedInUser,
   updateProfile,
