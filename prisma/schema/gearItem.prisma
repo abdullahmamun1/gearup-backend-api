@@ -1,5 +1,5 @@
 model GearItem {
-  id          String  @id @default(uuid())
+  id          String   @id @default(uuid())
   name        String
   description String?
   brand       String?
@@ -8,9 +8,15 @@ model GearItem {
   /// Extra gallery shots shown on the detail page, after the cover.
   images      String[] @default([])
 
-  pricePerDay Decimal @db.Decimal(10, 2)
-  stock       Int     @default(1)
-  isAvailable Boolean @default(true)
+  pricePerDay   Decimal @db.Decimal(10, 2)
+  /// Refundable security deposit per unit.
+  depositAmount Decimal @default(0) @db.Decimal(10, 2)
+  /// Total units the provider owns. Availability for a date range is this
+  /// minus the units held by overlapping bookings — stock is never decremented.
+  stock         Int     @default(1)
+  isAvailable   Boolean @default(true)
+  /// Picked by admins for the home page carousel.
+  isFeatured    Boolean @default(false)
 
   providerId String
   provider   User   @relation("ProviderGear", fields: [providerId], references: [id], onDelete: Cascade)

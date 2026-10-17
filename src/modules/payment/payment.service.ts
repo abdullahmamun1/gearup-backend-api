@@ -1,17 +1,29 @@
 import Stripe from "stripe";
-import { PaymentStatus } from "../../../generated/prisma/enums";
+import { PaymentStatus, RentalStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
 import config from "../../config";
-import { paymentUtils } from "./payment.util";
+import { rentalService } from "../rental/rental.service";
+import { paymentUtils, toStripeAmount } from "./payment.util";
 import { IGetQueryParams } from "../provider/provider.interface";
 
 export interface IGetPaymentsQueryParams extends IGetQueryParams {
   status?: PaymentStatus;
 }
 
+/** Stripe sessions must expire 30 min – 24 h after creation. */
+const sessionExpiry = (paymentDueAt: Date, now: Date) => {
+  const earliest = now.getTime() + 31 * 60 * 1000;
+  const latest = now.getTime() + 23 * 60 * 60 * 1000;
+  const target = Math.min(Math.max(paymentDueAt.getTime(), earliest), latest);
+  return Math.floor(target / 1000);
+};
+
+const MIN_CHARGE = 65;
+
 const createCheckoutSession = async (orderId: string, customerId: string) => {
+  const now = new Date();
   const order = await prisma.rentalOrder.findUnique({
     where: {
       id: orderId,
@@ -24,44 +36,76 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
   if (order.customerId !== customerId) {
     throw createError(403, "You do not own this order");
   }
-  if (order.status !== "CONFIRMED") {
+  if (order.status !== RentalStatus.CONFIRMED) {
     throw createError(400, `Cannot pay for an order in ${order.status} status`);
+  }
+  if (!order.paymentDueAt || order.paymentDueAt <= now) {
+    await rentalService.expireStaleOrders(true);
+    throw createError(
+      400,
+      "The payment window for this order has closed. Please book again.",
+    );
   }
 
   const existingPending = await prisma.payment.findFirst({
     where: {
       rentalOrderId: orderId,
-      status: "PENDING",
+      status: PaymentStatus.PENDING,
     },
   });
   if (existingPending) {
-    const session = await stripe.checkout.sessions.retrieve(
-      existingPending.transactionId,
-    );
-    return { paymentUrl: session.url, payment: existingPending };
+    const session = await stripe.checkout.sessions
+      .retrieve(existingPending.transactionId)
+      .catch(() => null);
+    if (session?.status === "open" && session.url) {
+      return { paymentUrl: session.url, payment: existingPending };
+    }
+    await prisma.payment.update({
+      where: { id: existingPending.id },
+      data: { status: PaymentStatus.FAILED },
+    });
   }
 
-  const amountInCents = Math.round(Number(order.totalAmount) * 100);
-  if (Number(order.totalAmount) < 65) {
+  const rental = Number(order.totalAmount);
+  const deposit = Number(order.depositAmount);
+  const charge = rental + deposit;
+  if (charge < MIN_CHARGE) {
     throw createError(
       400,
-      "Order amount is too low to process payment. Minimum order amount is ৳65.",
+      `Order amount is too low to process payment. Minimum order amount is ৳${MIN_CHARGE}.`,
     );
   }
+
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    {
+      price_data: {
+        currency: "bdt",
+        product_data: { name: `GearUp rental · order ${order.id.slice(0, 8)}` },
+        unit_amount: toStripeAmount(rental),
+      },
+      quantity: 1,
+    },
+  ];
+  if (deposit > 0) {
+    lineItems.push({
+      price_data: {
+        currency: "bdt",
+        product_data: {
+          name: "Refundable security deposit",
+          description: "Refunded when the gear is returned in good condition.",
+        },
+        unit_amount: toStripeAmount(deposit),
+      },
+      quantity: 1,
+    });
+  }
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     payment_method_types: ["card"],
     customer_email: order.customer.email,
-    line_items: [
-      {
-        price_data: {
-          currency: "bdt",
-          product_data: { name: `GearUp Rental Order ${order.id}` },
-          unit_amount: amountInCents,
-        },
-        quantity: 1,
-      },
-    ],
+    line_items: lineItems,
+    expires_at: sessionExpiry(order.paymentDueAt, now),
     metadata: { rentalOrderId: order.id, customerId },
     success_url: `${config.app_url}/payment-success?orderId=${order.id}`,
     cancel_url: `${config.app_url}/payment-cancelled?orderId=${order.id}`,
@@ -70,9 +114,9 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
   const payment = await prisma.payment.create({
     data: {
       transactionId: session.id,
-      amount: order.totalAmount,
+      amount: charge,
       gateway: "STRIPE",
-      status: "PENDING",
+      status: PaymentStatus.PENDING,
       rentalOrderId: order.id,
       customerId,
     },
@@ -94,6 +138,9 @@ const handleWebhookEvent = async (payload: Buffer, signature: string) => {
       break;
     case "checkout.session.expired":
       await paymentUtils.handleSessionExpired(event.data.object);
+      break;
+    case "charge.refunded":
+      await paymentUtils.handleChargeRefunded(event.data.object);
       break;
   }
 

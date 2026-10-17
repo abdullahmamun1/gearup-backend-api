@@ -27,3 +27,19 @@ enum PaymentStatus {
 enum PaymentGateway {
   STRIPE
 }
+
+enum CancelReason {
+  CUSTOMER
+  PROVIDER_DECLINED
+  PAYMENT_EXPIRED
+  NO_PROVIDER_RESPONSE
+  ADMIN
+}
+
+enum DepositStatus {
+  NONE
+  HELD
+  REFUNDED
+  PARTIALLY_REFUNDED
+  CLAIMED
+}

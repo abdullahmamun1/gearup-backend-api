@@ -1,10 +1,14 @@
 model Payment {
-  id            String         @id @default(uuid())
-  transactionId String         @unique // Stripe payment intent / charge id
-  amount        Decimal        @db.Decimal(10, 2)
-  gateway       PaymentGateway @default(STRIPE)
-  status        PaymentStatus  @default(PENDING)
-  paidAt        DateTime?
+  id                    String         @id @default(uuid())
+  transactionId         String         @unique // Stripe checkout session id
+  /// Rental + deposit, as charged.
+  amount                Decimal        @db.Decimal(10, 2)
+  stripePaymentIntentId String?
+  refundedAmount        Decimal        @default(0) @db.Decimal(10, 2)
+  refundedAt            DateTime?
+  gateway               PaymentGateway @default(STRIPE)
+  status                PaymentStatus  @default(PENDING)
+  paidAt                DateTime?
 
   rentalOrderId String
   rentalOrder   RentalOrder @relation(fields: [rentalOrderId], references: [id])

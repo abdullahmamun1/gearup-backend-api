@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  dateKeyField,
   numericQueryField,
   paginationQueryFields,
   uuidField,
@@ -32,6 +33,11 @@ const gearItemFields = {
     .number("Price per day must be a number")
     .positive("Price per day must be greater than 0")
     .max(1000000, "Price per day is unrealistically high"),
+  depositAmount: z
+    .number("Deposit must be a number")
+    .nonnegative("Deposit cannot be negative")
+    .max(1000000, "Deposit is unrealistically high")
+    .optional(),
   stock: z
     .number("Stock must be a number")
     .int("Stock must be a whole number")
@@ -69,6 +75,9 @@ const gearQuery = z.object({
   sortOrder: z
     .enum(["asc", "desc"], { error: "Sort order must be asc or desc" })
     .optional(),
+  /** Only gear with at least one unit free on every day of [from, to). */
+  from: dateKeyField("From date").optional(),
+  to: dateKeyField("To date").optional(),
   ...paginationQueryFields,
 });
 
@@ -77,6 +86,13 @@ const providerGearQuery = gearQuery.omit({
   brand: true,
   minPrice: true,
   maxPrice: true,
+  from: true,
+  to: true,
+});
+
+const availabilityQuery = z.object({
+  from: dateKeyField("From date").optional(),
+  to: dateKeyField("To date").optional(),
 });
 
 export const gearValidation = {
@@ -85,4 +101,5 @@ export const gearValidation = {
   gearIdParam,
   gearQuery,
   providerGearQuery,
+  availabilityQuery,
 };

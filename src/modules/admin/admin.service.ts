@@ -3,6 +3,7 @@ import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { safeUserSelect } from "../../utils/userSelect";
+import { orderInclude, rentalService } from "../rental/rental.service";
 import { IGetQueryParams } from "../provider/provider.interface";
 import {
   ICreateRentalOrderInput,
@@ -112,6 +113,8 @@ const getAllGear = async (query: IGetAdminGearQueryParams) => {
 };
 
 const getAllRentals = async (query: IGetOrderQueryParams) => {
+  await rentalService.expireStaleOrders();
+
   const page = query.page ? Number(query.page) : 1;
   const limit = query.limit ? Number(query.limit) : 10;
   const skip = (page - 1) * limit;
@@ -125,11 +128,7 @@ const getAllRentals = async (query: IGetOrderQueryParams) => {
     skip,
     take: limit,
     orderBy: { createdAt: "desc" },
-    include: {
-      customer: { select: { id: true, name: true, email: true } },
-      items: { include: { gearItem: true } },
-      payments: true,
-    },
+    include: { ...orderInclude, payments: true },
   });
   const totalCount = await prisma.rentalOrder.count({ where });
   return {

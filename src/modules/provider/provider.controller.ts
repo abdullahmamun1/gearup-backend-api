@@ -4,12 +4,12 @@ import { catchAsync } from "../../utils/catchAsync";
 import { providerService } from "./provider.service";
 import { sendResponse } from "../../utils/sendResponse";
 import { getValidatedQuery } from "../../middleware/validateRequest";
-import { IGetQueryParams } from "./provider.interface";
+import { IGetProviderOrdersQueryParams } from "./provider.interface";
 
 const getProviderOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const providerId = req.user!.id;
-    const query = getValidatedQuery<IGetQueryParams>(req);
+    const query = getValidatedQuery<IGetProviderOrdersQueryParams>(req);
     const orders = await providerService.getProviderOrders(
       providerId,
       query,
@@ -25,14 +25,13 @@ const getProviderOrders = catchAsync(
 
 const updateOrderStatus = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { status } = req.body;
     const { orderId } = req.params;
     const providerId = req.user!.id;
 
     const updatedOrder = await providerService.updateOrderStatus(
       providerId,
       orderId as string,
-      status,
+      req.body,
     );
 
     sendResponse(res, {

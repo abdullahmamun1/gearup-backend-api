@@ -9,6 +9,8 @@ export interface IGearQueryParams {
   limit?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
+  from?: string;
+  to?: string;
 }
 
 export interface IProviderGearQueryParams {
@@ -28,6 +30,7 @@ export interface IAddGearItemPayload {
   imageUrl?: string;
   images?: string[];
   pricePerDay: number;
+  depositAmount?: number;
   stock: number;
   categoryId: string;
 }
@@ -35,3 +38,8 @@ export interface IAddGearItemPayload {
 export type IUpdateGearItemPayload = Partial<IAddGearItemPayload> & {
   isAvailable?: boolean;
 };
+
+export interface IAvailabilityQueryParams {
+  from?: string;
+  to?: string;
+}

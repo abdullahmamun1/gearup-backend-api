@@ -21,6 +21,12 @@ router.get(
   validateParams(gearValidation.gearIdParam),
   gearController.getGearItemById,
 );
+router.get(
+  "/gear/:gearId/availability",
+  validateParams(gearValidation.gearIdParam),
+  validateQuery(gearValidation.availabilityQuery),
+  gearController.getGearAvailability,
+);
 router.get("/categories", gearController.getAllCategories);
 router.get("/brands", gearController.getAllBrands);
 

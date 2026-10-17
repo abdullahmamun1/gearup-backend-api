@@ -5,22 +5,24 @@
  * upserted with an empty `update`, so existing rows — including real accounts
  * that share a demo email — are never modified. Nothing is deleted.
  *
- * Stock follows the current model, where placing an order decrements stock and
- * returning it does not restore it: each item's `stock` is seeded as
- * `owned - quantity in every non-cancelled order`.
+ * `stock` is the number of units a provider owns. Availability for any dates
+ * is computed from overlapping bookings, so seeded orders don't touch it.
  */
 import { createHash } from "node:crypto";
 import bcrypt from "bcryptjs";
 import config from "../src/config";
 import { prisma } from "../src/lib/prisma";
 import {
+  CancelReason,
+  DepositStatus,
   PaymentStatus,
   RentalStatus,
   Role,
 } from "../generated/prisma/enums";
 
 const PASSWORD = "Password123";
-const DAY = 24 * 60 * 60 * 1000;
+const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 
 /** Deterministic RFC 4122 v4-shaped uuid, so `z.uuid()` accepts seeded ids. */
 const seedId = (key: string) => {
@@ -83,6 +85,21 @@ type SeedGear = {
   owned: number;
   images: string[];
   description: string;
+};
+
+/** Refundable deposit per unit for the pricier items; the rest have none. */
+const DEPOSITS: Record<string, number> = {
+  "tent-4p": 1000,
+  "kayak-single": 2000,
+  "kayak-tandem": 3000,
+  sup: 2000,
+  surfboard: 1500,
+  mtb: 2000,
+  "road-bike": 2500,
+  ebike: 3000,
+  gps: 1500,
+  rope: 1000,
+  "bike-rack": 1000,
 };
 
 const GEAR: SeedGear[] = [
@@ -158,6 +175,7 @@ type SeedOrder = {
   start: number;
   days: number;
   status: RentalStatus;
+  cancelReason?: CancelReason;
   review?: { rating: number; comment: string };
 };
 
@@ -183,8 +201,8 @@ const ORDERS: SeedOrder[] = [
   { key: "o19", customer: "customer1", gear: "surfboard", quantity: 1, start: 12, days: 2, status: RentalStatus.PLACED },
   { key: "o20", customer: "customer4", gear: "badminton", quantity: 1, start: 4, days: 1, status: RentalStatus.PLACED },
   { key: "o21", customer: "customer5", gear: "gps", quantity: 1, start: 14, days: 4, status: RentalStatus.PLACED },
-  { key: "o22", customer: "customer2", gear: "lantern", quantity: 1, start: 2, days: 2, status: RentalStatus.CANCELLED },
-  { key: "o23", customer: "customer3", gear: "volleyball", quantity: 1, start: 6, days: 1, status: RentalStatus.CANCELLED },
+  { key: "o22", customer: "customer2", gear: "lantern", quantity: 1, start: 2, days: 2, status: RentalStatus.CANCELLED, cancelReason: CancelReason.CUSTOMER },
+  { key: "o23", customer: "customer3", gear: "volleyball", quantity: 1, start: 6, days: 1, status: RentalStatus.CANCELLED, cancelReason: CancelReason.PROVIDER_DECLINED },
 ];
 
 const PAID_STATUSES: RentalStatus[] = [
@@ -192,6 +210,24 @@ const PAID_STATUSES: RentalStatus[] = [
   RentalStatus.PICKED_UP,
   RentalStatus.RETURNED,
 ];
+
+/** The happy path, in order — used to backdate each step's timestamp. */
+const ORDER_FLOW: RentalStatus[] = [
+  RentalStatus.PLACED,
+  RentalStatus.CONFIRMED,
+  RentalStatus.PAID,
+  RentalStatus.PICKED_UP,
+  RentalStatus.RETURNED,
+];
+
+const depositStatusFor = (status: RentalStatus, deposit: number) => {
+  if (deposit <= 0) return DepositStatus.NONE;
+  if (status === RentalStatus.RETURNED) return DepositStatus.REFUNDED;
+  if (status === RentalStatus.PAID || status === RentalStatus.PICKED_UP) {
+    return DepositStatus.HELD;
+  }
+  return DepositStatus.NONE;
+};
 
 // ---------------------------------------------------------------- run
 
@@ -225,13 +261,6 @@ async function main() {
     categoryIds.set(category.name, row.id);
   }
 
-  const heldByGear = new Map<string, number>();
-  for (const order of ORDERS) {
-    if (order.status !== RentalStatus.CANCELLED) {
-      heldByGear.set(order.gear, (heldByGear.get(order.gear) ?? 0) + order.quantity);
-    }
-  }
-
   const gearByKey = new Map(GEAR.map((gear) => [gear.key, gear]));
   for (const gear of GEAR) {
     const [cover, ...gallery] = gear.images.map(img);
@@ -246,7 +275,8 @@ async function main() {
         imageUrl: cover ?? null,
         images: gallery,
         pricePerDay: gear.pricePerDay,
-        stock: Math.max(gear.owned - (heldByGear.get(gear.key) ?? 0), 0),
+        depositAmount: DEPOSITS[gear.key] ?? 0,
+        stock: gear.owned,
         isAvailable: true,
         providerId: userIds.get(gear.provider)!,
         categoryId: categoryIds.get(gear.category)!,
@@ -254,6 +284,7 @@ async function main() {
     });
   }
 
+  const now = new Date();
   for (const order of ORDERS) {
     const gear = gearByKey.get(order.gear)!;
     const orderId = seedId(`order:${order.key}`);
@@ -261,6 +292,10 @@ async function main() {
     const startDate = midnightUtc(order.start);
     const endDate = midnightUtc(order.start + order.days);
     const totalAmount = gear.pricePerDay * order.quantity * order.days;
+    const depositAmount = (DEPOSITS[gear.key] ?? 0) * order.quantity;
+    const createdAt = new Date(Math.min(startDate.getTime() - 3 * DAY, now.getTime() - HOUR));
+    const reached = (status: RentalStatus) =>
+      ORDER_FLOW.indexOf(order.status) >= ORDER_FLOW.indexOf(status);
 
     await prisma.rentalOrder.upsert({
       where: { id: orderId },
@@ -271,8 +306,26 @@ async function main() {
         startDate,
         endDate,
         totalAmount,
+        depositAmount,
+        depositStatus: depositStatusFor(order.status, depositAmount),
         customerId,
-        createdAt: new Date(startDate.getTime() - 3 * DAY),
+        providerId: userIds.get(gear.provider)!,
+        createdAt,
+        ...(order.status === RentalStatus.PLACED && {
+          respondBy: new Date(now.getTime() + 48 * HOUR),
+        }),
+        ...(reached(RentalStatus.CONFIRMED) && {
+          confirmedAt: new Date(createdAt.getTime() + 2 * HOUR),
+        }),
+        ...(order.status === RentalStatus.CONFIRMED && {
+          paymentDueAt: new Date(now.getTime() + 24 * HOUR),
+        }),
+        ...(reached(RentalStatus.PICKED_UP) && { pickedUpAt: startDate }),
+        ...(reached(RentalStatus.RETURNED) && { returnedAt: endDate }),
+        ...(order.cancelReason && {
+          cancelReason: order.cancelReason,
+          cancelledAt: new Date(createdAt.getTime() + 5 * HOUR),
+        }),
         items: {
           create: {
             id: seedId(`order-item:${order.key}`),
@@ -292,9 +345,14 @@ async function main() {
         create: {
           id: seedId(`payment:${order.key}`),
           transactionId: `seed_cs_${order.key}`,
-          amount: totalAmount,
+          amount: totalAmount + depositAmount,
           status: PaymentStatus.COMPLETED,
           paidAt,
+          ...(order.status === RentalStatus.RETURNED &&
+            depositAmount > 0 && {
+              refundedAmount: depositAmount,
+              refundedAt: endDate,
+            }),
           rentalOrderId: orderId,
           customerId,
           createdAt: paidAt,

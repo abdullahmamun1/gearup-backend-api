@@ -8,3 +8,10 @@ export interface IGetQueryParams {
 export interface IGetProviderOrdersQueryParams extends IGetQueryParams {
   status?: RentalStatus;
 }
+
+export interface IUpdateOrderStatusPayload {
+  status: RentalStatus;
+  note?: string;
+  condition?: "OK" | "DAMAGED";
+  damageAmount?: number;
+}

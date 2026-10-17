@@ -5,7 +5,11 @@ import { getValidatedQuery } from "../../middleware/validateRequest";
 import { catchAsync } from "../../utils/catchAsync";
 import { categoryService } from "../category/category.service";
 import { gearService } from "./gear.service";
-import { IGearQueryParams, IProviderGearQueryParams } from "./gear.interface";
+import {
+  IAvailabilityQueryParams,
+  IGearQueryParams,
+  IProviderGearQueryParams,
+} from "./gear.interface";
 
 const getAllCategories = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
@@ -121,11 +125,28 @@ const deleteGearItem = catchAsync(
   },
 );
 
+const getGearAvailability = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    const { gearId } = req.params;
+    const result = await gearService.getGearAvailability(
+      gearId as string,
+      getValidatedQuery<IAvailabilityQueryParams>(req),
+    );
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Availability retrieved successfully",
+      data: result,
+    });
+  },
+);
+
 export const gearController = {
   getAllCategories,
   getAllBrands,
   getAllGearItems,
   getGearItemById,
+  getGearAvailability,
   getProviderGearItems,
   addGearItem,
   updateGearItem,

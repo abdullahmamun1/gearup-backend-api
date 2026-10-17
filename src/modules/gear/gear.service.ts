@@ -1,7 +1,11 @@
 import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
+import { addDays, daysBetween, parseDateKey, today } from "../../utils/dates";
+import { rentalAvailability } from "../rental/rental.availability";
+import { RENTAL_POLICY } from "../rental/rental.policy";
 import {
+  IAvailabilityQueryParams,
   IGearQueryParams,
   IAddGearItemPayload,
   IProviderGearQueryParams,
@@ -53,33 +57,53 @@ const getAllGearItems = async (query: IGearQueryParams) => {
     });
   }
 
-  const gearItems = await prisma.gearItem.findMany({
-    //dynamic searching, filtering
-    where: {
-      AND: andConditions,
-    },
-    //dynamic sorting, pagination
-    take: limit,
-    skip: skip,
-    orderBy: {
-      [sortBy]: sortOrder,
-    },
-    include: {
-      category: true,
-      provider: {
-        select: {
-          id: true,
-          name: true,
-          email: true,
-        },
+  const where: GearItemWhereInput = { AND: andConditions };
+  const orderBy = { [sortBy]: sortOrder };
+  const include = {
+    category: true,
+    provider: {
+      select: {
+        id: true,
+        name: true,
+        email: true,
       },
     },
-  });
-  const totalCount = await prisma.gearItem.count({
-    where: {
-      AND: andConditions,
-    },
-  });
+  };
+
+  let gearItems;
+  let totalCount;
+  const range = parseDateRange(query.from, query.to);
+  if (range) {
+    // Availability depends on bookings, not columns, so filter in memory:
+    // every match's free units for the range, then paginate what's left.
+    const candidates = await prisma.gearItem.findMany({
+      where,
+      orderBy,
+      select: { id: true, stock: true, isAvailable: true },
+    });
+    const free = await rentalAvailability.availableUnits(
+      prisma,
+      candidates,
+      range.from,
+      range.to,
+    );
+    const ids = candidates
+      .filter((gear) => (free.get(gear.id) ?? 0) > 0)
+      .map((gear) => gear.id);
+    const pageIds = ids.slice(skip, skip + limit);
+    const rows = await prisma.gearItem.findMany({
+      where: { id: { in: pageIds } },
+      include,
+    });
+    const rowById = new Map(rows.map((row) => [row.id, row]));
+    gearItems = pageIds.map((id) => rowById.get(id)!).filter(Boolean);
+    totalCount = ids.length;
+  } else {
+    [gearItems, totalCount] = await Promise.all([
+      prisma.gearItem.findMany({ where, take: limit, skip, orderBy, include }),
+      prisma.gearItem.count({ where }),
+    ]);
+  }
 
   const ratings = await prisma.review.groupBy({
     by: ["gearItemId"],
@@ -108,6 +132,48 @@ const getAllGearItems = async (query: IGearQueryParams) => {
       totalPages: Math.ceil(totalCount / limit),
     },
   };
+};
+
+/** Both dates or neither; a bad pair is the caller's mistake (400). */
+const parseDateRange = (fromKey?: string, toKey?: string) => {
+  if (!fromKey && !toKey) return null;
+  if (!fromKey || !toKey) {
+    throw createError(400, "Pick both a start and an end date");
+  }
+  const from = parseDateKey(fromKey);
+  const to = parseDateKey(toKey);
+  const days = daysBetween(from, to);
+  if (days < 1) {
+    throw createError(400, "The end date must be after the start date");
+  }
+  if (days > RENTAL_POLICY.maxRentalDays) {
+    throw createError(
+      400,
+      `Rentals can be at most ${RENTAL_POLICY.maxRentalDays} days long`,
+    );
+  }
+  return { from, to };
+};
+
+const CALENDAR_DEFAULT_DAYS = 90;
+const CALENDAR_MAX_DAYS = 186;
+
+const getGearAvailability = async (
+  gearId: string,
+  query: IAvailabilityQueryParams,
+) => {
+  const from = query.from ? parseDateKey(query.from) : today();
+  const to = query.to
+    ? parseDateKey(query.to)
+    : addDays(from, CALENDAR_DEFAULT_DAYS);
+  const days = daysBetween(from, to);
+  if (days < 1 || days > CALENDAR_MAX_DAYS) {
+    throw createError(
+      400,
+      `Pick a range between 1 and ${CALENDAR_MAX_DAYS} days`,
+    );
+  }
+  return rentalAvailability.getCalendar(gearId, from, to);
 };
 
 const getGearItemById = async (gearId: string) => {
@@ -280,6 +346,7 @@ const deleteGearItem = async (providerId: string, gearId: string) => {
 export const gearService = {
   getAllGearItems,
   getGearItemById,
+  getGearAvailability,
   getAllBrands,
   getProviderGearItems,
   addGearItem,

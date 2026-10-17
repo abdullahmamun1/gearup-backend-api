@@ -26,7 +26,19 @@ export const paginationQueryFields = {
     .optional(),
 };
 
-export const dateStringField = (label: string) =>
-  z.string().refine((value) => !Number.isNaN(Date.parse(value)), {
-    error: `${label} must be a valid date`,
-  });
+/**
+ * A calendar date. Accepts `YYYY-MM-DD` or a full ISO timestamp and keeps
+ * only the date part, so `2026-08-01T00:00:00.000Z` becomes `2026-08-01`.
+ */
+export const dateKeyField = (label: string) =>
+  z
+    .string(`${label} is required`)
+    .regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, `${label} must be a date (YYYY-MM-DD)`)
+    .transform((value) => value.slice(0, 10))
+    .refine(
+      (value) => {
+        const date = new Date(`${value}T00:00:00.000Z`);
+        return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+      },
+      { error: `${label} must be a real calendar date` },
+    );
