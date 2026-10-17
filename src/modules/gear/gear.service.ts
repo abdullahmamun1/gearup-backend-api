@@ -1,6 +1,7 @@
 import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
+import { assertEmailVerified } from "../auth/auth.service";
 import { addDays, daysBetween, parseDateKey, today } from "../../utils/dates";
 import { rentalAvailability } from "../rental/rental.availability";
 import { RENTAL_POLICY } from "../rental/rental.policy";
@@ -262,6 +263,8 @@ const addGearItem = async (
   providerId: string,
   payload: IAddGearItemPayload,
 ) => {
+  await assertEmailVerified(providerId);
+
   const category = await prisma.category.findUnique({
     where: {
       id: payload.categoryId,

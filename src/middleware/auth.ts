@@ -35,14 +35,17 @@ export const auth = (...requiredRoles: Role[]) => {
     if (!verifiedToken.success) {
       throw createError(401, verifiedToken.error);
     }
-    const { id } = verifiedToken.data as JwtPayload;
+    const payload = verifiedToken.data as JwtPayload;
     const user = await prisma.user.findUnique({
       where: {
-        id,
+        id: payload.id,
       },
     });
     if (!user) {
       throw createError(404, "User not found");
+    }
+    if (jwtUtils.issuedBefore(payload, user.passwordChangedAt)) {
+      throw createError(401, "Your password was changed. Please sign in again.");
     }
     if (user.status === "SUSPENDED") {
       throw createError(403, "Your account is suspended");

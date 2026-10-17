@@ -1,0 +1,17 @@
+/// One-time links for email verification and password reset. Only the
+/// SHA-256 hash of the token is stored; the token itself lives in the email.
+model AuthToken {
+  id        String        @id @default(uuid())
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, type])
+  @@map("auth_tokens")
+}

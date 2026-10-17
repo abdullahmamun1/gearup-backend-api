@@ -43,3 +43,21 @@ enum DepositStatus {
   PARTIALLY_REFUNDED
   CLAIMED
 }
+
+enum EmailStatus {
+  PENDING
+  SENDING
+  SENT
+  FAILED
+}
+
+enum AuthTokenType {
+  VERIFY_EMAIL
+  RESET_PASSWORD
+}
+
+enum ContactStatus {
+  NEW
+  REPLIED
+  ARCHIVED
+}

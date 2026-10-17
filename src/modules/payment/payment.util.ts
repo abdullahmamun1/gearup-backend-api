@@ -8,6 +8,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
+import { emailService } from "../email/email.service";
 import { isPaymentWindowOpen } from "../rental/rental.policy";
 
 /** BDT is a two-decimal currency in Stripe: amounts are sent in poisha. */
@@ -117,9 +118,26 @@ const handleSessionCompleted = async (session: Stripe.Checkout.Session) => {
           stripePaymentIntentId: paymentIntentId,
         },
       });
+
+      const forEmail = await emailService.loadOrderForEmail(tx, order.id);
+      await emailService.enqueue(
+        tx,
+        (["customer", "provider"] as const).map((audience) => {
+          const { to, payload } = emailService.orderRecipient(forEmail, audience);
+          return {
+            to,
+            template: "paymentReceived",
+            payload: { ...payload, paid: Number(payment.amount) },
+            dedupeKey: `paid:${order.id}:${audience}`,
+          };
+        }),
+      );
       return true;
     });
-    if (settled) return;
+    if (settled) {
+      emailService.dispatchSoon();
+      return;
+    }
   }
 
   // Paid too late, or the order was cancelled meanwhile: its units may
@@ -137,20 +155,36 @@ const handleSessionCompleted = async (session: Stripe.Checkout.Session) => {
     Number(payment.amount),
     `late-payment-refund-${payment.id}`,
   );
-  await prisma.$transaction([
-    prisma.payment.update({
+  await prisma.$transaction(async (tx) => {
+    await tx.payment.update({
       where: { id: payment.id },
       data: { refundedAmount: payment.amount, refundedAt: new Date() },
-    }),
-    prisma.rentalOrder.updateMany({
+    });
+    await tx.rentalOrder.updateMany({
       where: { id: order.id, status: { not: RentalStatus.CANCELLED } },
       data: {
         status: RentalStatus.CANCELLED,
         cancelReason: CancelReason.PAYMENT_EXPIRED,
         cancelledAt: now,
       },
-    }),
-  ]);
+    });
+
+    const forEmail = await emailService.loadOrderForEmail(tx, order.id);
+    const reason = forEmail.cancelReason ?? CancelReason.PAYMENT_EXPIRED;
+    const [toCustomer, toProvider] = emailService.cancellationEmails(
+      forEmail,
+      reason,
+      ["customer", "provider"],
+      { refunded: Number(payment.amount) },
+    );
+    await emailService.enqueue(tx, [
+      // Its own key: the customer may already have had a plain
+      // "cancelled" email, but this one tells them about the refund.
+      { ...toCustomer!, dedupeKey: `late-refund:${payment.id}` },
+      toProvider!,
+    ]);
+  });
+  emailService.dispatchSoon();
 };
 
 const handleSessionExpired = async (session: Stripe.Checkout.Session) => {

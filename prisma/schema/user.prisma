@@ -9,6 +9,12 @@ model User {
   role   Role
   status UserStatus @default(ACTIVE)
 
+  /// Null until the user clicks the link in their verification email.
+  emailVerifiedAt   DateTime?
+  /// Tokens issued before this are rejected (signs out other devices).
+  passwordChangedAt DateTime?
+  marketingEmails   Boolean   @default(true)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -18,6 +24,7 @@ model User {
   providerOrders RentalOrder[] @relation("ProviderOrders")
   reviews        Review[]      @relation("CustomerReviews")
   payments       Payment[]     @relation("CustomerPayments")
+  authTokens     AuthToken[]
 
   @@map("users")
 }

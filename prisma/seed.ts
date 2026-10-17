@@ -245,6 +245,7 @@ async function main() {
         email: user.email,
         role: user.role,
         passwordHash,
+        emailVerifiedAt: new Date(),
         ...(user.phone && { phone: user.phone }),
       },
     });

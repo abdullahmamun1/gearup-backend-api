@@ -2,7 +2,11 @@ import { Router } from "express";
 import { authController } from "./auth.controller";
 import { auth } from "../../middleware/auth";
 import { Role } from "../../../generated/prisma/enums";
-import { authLimiter, oauthLimiter } from "../../middleware/rateLimit";
+import {
+  authLimiter,
+  oauthLimiter,
+  writeLimiter,
+} from "../../middleware/rateLimit";
 import { validateRequest } from "../../middleware/validateRequest";
 import { authValidation } from "./auth.validation";
 
@@ -27,6 +31,29 @@ router.post(
   authController.loginWithGoogle,
 );
 router.post("/refresh-token", authController.refreshToken);
+
+router.post(
+  "/verify-email",
+  validateRequest(authValidation.verifyEmail),
+  authController.verifyEmail,
+);
+router.post(
+  "/resend-verification",
+  auth(Role.CUSTOMER, Role.PROVIDER, Role.ADMIN),
+  writeLimiter,
+  authController.resendVerification,
+);
+router.post(
+  "/forgot-password",
+  authLimiter,
+  validateRequest(authValidation.forgotPassword),
+  authController.forgotPassword,
+);
+router.post(
+  "/reset-password",
+  validateRequest(authValidation.resetPassword),
+  authController.resetPassword,
+);
 
 router.get(
   "/me",

@@ -3,6 +3,7 @@ import { GearItemWhereInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { safeUserSelect } from "../../utils/userSelect";
+import { emailService } from "../email/email.service";
 import { orderInclude, rentalService } from "../rental/rental.service";
 import { IGetQueryParams } from "../provider/provider.interface";
 import {
@@ -62,11 +63,29 @@ const updateUserStatus = async (
   if (!targetUser) {
     throw createError(404, "User not found");
   }
-  const updatedUser = await prisma.user.update({
-    where: { id: targetUserId },
-    data: { status },
-    select: safeUserSelect,
+  if (targetUser.status === status) {
+    return prisma.user.findUniqueOrThrow({
+      where: { id: targetUserId },
+      select: safeUserSelect,
+    });
+  }
+
+  const updatedUser = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({
+      where: { id: targetUserId },
+      data: { status },
+      select: safeUserSelect,
+    });
+    await emailService.enqueue(tx, [
+      {
+        to: user.email,
+        template: "accountStatus",
+        payload: { name: user.name, status },
+      },
+    ]);
+    return user;
   });
+  emailService.dispatchSoon();
   return updatedUser;
 };
 

@@ -17,4 +17,17 @@ export default {
   stripe_webhook_secret: process.env.STRIPE_WEBHOOK_SECRET!,
   google_client_id: process.env.GOOGLE_CLIENT_ID!,
   google_client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+  smtp: {
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 465),
+    secure: (process.env.SMTP_SECURE ?? "true") !== "false",
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+  /** e.g. `GearUp <you@gmail.com>`. Gmail only sends as your own address. */
+  mail_from: process.env.MAIL_FROM,
+  /** Where contact-form messages go. Falls back to every admin account. */
+  admin_email: process.env.ADMIN_EMAIL,
+  /** Vercel sends it as `Authorization: Bearer <CRON_SECRET>`. */
+  cron_secret: process.env.CRON_SECRET,
 };

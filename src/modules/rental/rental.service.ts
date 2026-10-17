@@ -10,6 +10,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { daysBetween, parseDateKey, today } from "../../utils/dates";
+import { emailService, orderEmailInclude } from "../email/email.service";
 import { paymentUtils } from "../payment/payment.util";
 import { rentalAvailability } from "./rental.availability";
 import {
@@ -48,30 +49,55 @@ const expireStaleOrders = async (force = false) => {
   }
   lastExpiryRun = now.getTime();
 
-  const [noResponse, unpaid] = await prisma.$transaction([
-    prisma.rentalOrder.updateMany({
+  const rules = [
+    {
+      reason: CancelReason.NO_PROVIDER_RESPONSE,
       where: { status: RentalStatus.PLACED, respondBy: { lte: now } },
-      data: {
-        status: RentalStatus.CANCELLED,
-        cancelReason: CancelReason.NO_PROVIDER_RESPONSE,
-        cancelledAt: now,
-      },
-    }),
-    prisma.rentalOrder.updateMany({
+    },
+    {
+      reason: CancelReason.PAYMENT_EXPIRED,
       where: {
         status: RentalStatus.CONFIRMED,
         paymentDueAt: {
           lte: new Date(now.getTime() - RENTAL_POLICY.paymentGraceMs),
         },
       },
-      data: {
-        status: RentalStatus.CANCELLED,
-        cancelReason: CancelReason.PAYMENT_EXPIRED,
-        cancelledAt: now,
-      },
-    }),
-  ]);
-  return { noResponse: noResponse.count, unpaid: unpaid.count };
+    },
+  ] satisfies { reason: CancelReason; where: Prisma.RentalOrderWhereInput }[];
+
+  const counts = { noResponse: 0, unpaid: 0 };
+  for (const rule of rules) {
+    const stale = await prisma.rentalOrder.findMany({
+      where: rule.where,
+      include: orderEmailInclude,
+    });
+
+    for (const order of stale) {
+      const cancelledNow = await prisma.$transaction(async (tx) => {
+        // Conditional: skip it if someone acted on the order meanwhile.
+        const updated = await tx.rentalOrder.updateMany({
+          where: { id: order.id, ...rule.where },
+          data: {
+            status: RentalStatus.CANCELLED,
+            cancelReason: rule.reason,
+            cancelledAt: now,
+          },
+        });
+        if (updated.count === 0) return false;
+        await emailService.enqueue(
+          tx,
+          emailService.cancellationEmails(order, rule.reason, ["customer", "provider"]),
+        );
+        return true;
+      });
+      if (cancelledNow) {
+        counts[rule.reason === CancelReason.PAYMENT_EXPIRED ? "unpaid" : "noResponse"]++;
+      }
+    }
+  }
+
+  if (counts.noResponse + counts.unpaid > 0) emailService.dispatchSoon();
+  return counts;
 };
 
 // ------------------------------------------------------------ create
@@ -149,10 +175,10 @@ const createRentalOrder = async (
     0,
   );
 
-  return prisma.$transaction(async (tx) => {
+  const created = await prisma.$transaction(async (tx) => {
     await rentalAvailability.lockAndAssertAvailable(tx, lines, start, end);
 
-    return tx.rentalOrder.create({
+    const order = await tx.rentalOrder.create({
       data: {
         customerId,
         providerId,
@@ -172,7 +198,23 @@ const createRentalOrder = async (
       },
       include: orderInclude,
     });
+
+    await emailService.enqueue(
+      tx,
+      (["customer", "provider"] as const).map((audience) => {
+        const { to, payload } = emailService.orderRecipient(order, audience);
+        return {
+          to,
+          template: "orderPlaced",
+          payload: { ...payload, respondBy: order.respondBy!.toISOString() },
+          dedupeKey: `placed:${order.id}:${audience}`,
+        };
+      }),
+    );
+    return order;
   });
+  emailService.dispatchSoon();
+  return created;
 };
 
 // ------------------------------------------------------------- read
@@ -260,13 +302,20 @@ const cancelRentalOrder = async (customerId: string, orderId: string) => {
     order.status === RentalStatus.PLACED ||
     order.status === RentalStatus.CONFIRMED
   ) {
-    const updated = await prisma.rentalOrder.updateMany({
-      where: { id: orderId, status: order.status },
-      data: cancelled,
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.rentalOrder.updateMany({
+        where: { id: orderId, status: order.status },
+        data: cancelled,
+      });
+      if (updated.count === 0) {
+        throw createError(409, "This order changed meanwhile. Please refresh.");
+      }
+      const forEmail = await emailService.loadOrderForEmail(tx, orderId);
+      await emailService.enqueue(
+        tx,
+        emailService.cancellationEmails(forEmail, CancelReason.CUSTOMER, ["provider"]),
+      );
     });
-    if (updated.count === 0) {
-      throw createError(409, "This order changed meanwhile. Please refresh.");
-    }
     if (order.status === RentalStatus.CONFIRMED) {
       await paymentUtils.expireOpenSessions(orderId);
     }
@@ -291,12 +340,12 @@ const cancelRentalOrder = async (customerId: string, orderId: string) => {
       `cancel-refund-${order.id}`,
     );
 
-    await prisma.$transaction([
-      prisma.payment.update({
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.update({
         where: { id: payment.id },
         data: { refundedAmount: payment.amount, refundedAt: now },
-      }),
-      prisma.rentalOrder.update({
+      });
+      await tx.rentalOrder.update({
         where: { id: orderId },
         data: {
           ...cancelled,
@@ -304,11 +353,22 @@ const cancelRentalOrder = async (customerId: string, orderId: string) => {
             depositStatus: DepositStatus.REFUNDED,
           }),
         },
-      }),
-    ]);
+      });
+      const forEmail = await emailService.loadOrderForEmail(tx, orderId);
+      await emailService.enqueue(
+        tx,
+        emailService.cancellationEmails(
+          forEmail,
+          CancelReason.CUSTOMER,
+          ["customer", "provider"],
+          { refunded: refundable },
+        ),
+      );
+    });
   } else {
     throw createError(400, `Cannot cancel an order in ${order.status} status`);
   }
+  emailService.dispatchSoon();
 
   return prisma.rentalOrder.findUniqueOrThrow({
     where: { id: orderId },

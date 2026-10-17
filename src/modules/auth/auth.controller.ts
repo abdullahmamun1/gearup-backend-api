@@ -97,7 +97,60 @@ const updateProfile = catchAsync(
   },
 );
 
+const verifyEmail = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    await authService.verifyEmail(req.body.token);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Your email is verified",
+      data: null,
+    });
+  },
+);
+
+const resendVerification = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    await authService.resendVerification(req.user!.id);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Verification email sent",
+      data: null,
+    });
+  },
+);
+
+const forgotPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    await authService.forgotPassword(req.body.email);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message:
+        "If an account exists for that email, we've sent a link to reset the password.",
+      data: null,
+    });
+  },
+);
+
+const resetPassword = catchAsync(
+  async (req: Request, res: Response, next: NextFunction) => {
+    await authService.resetPassword(req.body.token, req.body.password);
+    sendResponse(res, {
+      success: true,
+      statusCode: httpStatus.OK,
+      message: "Your password has been reset. Please sign in.",
+      data: null,
+    });
+  },
+);
+
 export const authController = {
+  verifyEmail,
+  resendVerification,
+  forgotPassword,
+  resetPassword,
   registerUser,
   loginUser,
   loginWithGoogle,

@@ -41,9 +41,13 @@ const ipAndEmailKey = (req: Request) => {
   return email ? `${ip}:${email}` : ip;
 };
 
+/** Signed-in requests count per user; anonymous ones per IP + email. */
+const userOrIpAndEmailKey = (req: Request) =>
+  req.user ? `user:${req.user.id}` : ipAndEmailKey(req);
+
 const MINUTE = 60 * 1000;
 
-/** Login, register and (later) password reset — per IP + email. */
+/** Login, register and forgot password — per IP + email. */
 export const authLimiter = createLimiter(
   MINUTE,
   10,
@@ -65,9 +69,13 @@ export const aiLimiter = createLimiter(
   "The AI assistant is busy. Please try again in a minute.",
 );
 
-/** User-generated writes such as messages, contact and newsletter forms. */
+/**
+ * User-generated writes such as messages, contact and newsletter forms.
+ * Put it after `auth()` on signed-in routes so it can count per user.
+ */
 export const writeLimiter = createLimiter(
   MINUTE,
-  20,
-  "You're doing that too often. Please slow down.",
+  5,
+  "You're doing that too often. Please wait a minute and try again.",
+  userOrIpAndEmailKey,
 );

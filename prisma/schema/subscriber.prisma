@@ -1,0 +1,14 @@
+/// Newsletter subscribers (double opt-in). `token` is in every confirm and
+/// unsubscribe link.
+model Subscriber {
+  id             String    @id @default(uuid())
+  email          String    @unique
+  token          String    @unique
+  confirmedAt    DateTime?
+  unsubscribedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("subscribers")
+}

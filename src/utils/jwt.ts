@@ -24,7 +24,17 @@ const verifyToken = (token: string, secret: string) => {
   }
 };
 
+/**
+ * True when the token predates a password change. `iat` is in whole seconds,
+ * so a token issued in the same second as the change still counts as newer.
+ */
+const issuedBefore = (payload: JwtPayload, changedAt: Date | null) =>
+  !!changedAt &&
+  typeof payload.iat === "number" &&
+  payload.iat < Math.floor(changedAt.getTime() / 1000);
+
 export const jwtUtils = {
   createToken,
   verifyToken,
+  issuedBefore,
 };

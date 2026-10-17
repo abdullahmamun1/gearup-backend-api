@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma";
 import { stripe } from "../../lib/stripe";
 import { createError } from "../../utils/createError";
 import config from "../../config";
+import { EMAIL_NOT_VERIFIED } from "../auth/auth.service";
 import { rentalService } from "../rental/rental.service";
 import { paymentUtils, toStripeAmount } from "./payment.util";
 import { IGetQueryParams } from "../provider/provider.interface";
@@ -28,13 +29,18 @@ const createCheckoutSession = async (orderId: string, customerId: string) => {
     where: {
       id: orderId,
     },
-    include: { customer: { select: { email: true, name: true } } },
+    include: {
+      customer: { select: { email: true, name: true, emailVerifiedAt: true } },
+    },
   });
   if (!order) {
     throw createError(404, "Rental Order not found");
   }
   if (order.customerId !== customerId) {
     throw createError(403, "You do not own this order");
+  }
+  if (!order.customer.emailVerifiedAt) {
+    throw createError(403, EMAIL_NOT_VERIFIED);
   }
   if (order.status !== RentalStatus.CONFIRMED) {
     throw createError(400, `Cannot pay for an order in ${order.status} status`);

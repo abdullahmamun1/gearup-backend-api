@@ -22,4 +22,5 @@ export interface IGoogleLoginPayload {
 export interface IUpdateProfilePayload {
   name?: string;
   phone?: string;
+  marketingEmails?: boolean;
 }

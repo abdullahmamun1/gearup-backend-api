@@ -7,6 +7,8 @@ import {
 import { RentalOrderUpdateManyMutationInput } from "../../../generated/prisma/models";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
+import { EmailMessage } from "../email/email.interface";
+import { emailService } from "../email/email.service";
 import { paymentUtils } from "../payment/payment.util";
 import { paymentDueFor } from "../rental/rental.policy";
 import { orderInclude, rentalService } from "../rental/rental.service";
@@ -68,46 +70,98 @@ const updateOrderStatus = async (
     throw createError(403, "You are not authorized to update this order");
   }
 
-  /** Applies `data` only if nobody changed the order since we read it. */
-  const transition = async (data: RentalOrderUpdateManyMutationInput) => {
-    const updated = await prisma.rentalOrder.updateMany({
-      where: { id: orderId, status: order.status },
-      data,
+  type ForEmail = Awaited<ReturnType<typeof emailService.loadOrderForEmail>>;
+
+  /**
+   * Applies `data` only if nobody changed the order since we read it, and
+   * queues its emails in the same transaction.
+   */
+  const transition = async (
+    data: RentalOrderUpdateManyMutationInput,
+    emails?: (order: ForEmail) => EmailMessage[],
+  ) => {
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.rentalOrder.updateMany({
+        where: { id: orderId, status: order.status },
+        data,
+      });
+      if (updated.count === 0) {
+        throw createError(409, "This order changed meanwhile. Please refresh.");
+      }
+      if (emails) {
+        const forEmail = await emailService.loadOrderForEmail(tx, orderId);
+        await emailService.enqueue(tx, emails(forEmail));
+      }
     });
-    if (updated.count === 0) {
-      throw createError(409, "This order changed meanwhile. Please refresh.");
-    }
+    if (emails) emailService.dispatchSoon();
   };
+
+  const returnedEmail =
+    (depositOutcome: "NONE" | "REFUNDED" | "CLAIMED", claim?: number) =>
+    (forEmail: ForEmail): EmailMessage[] => {
+      const { to, payload } = emailService.orderRecipient(forEmail, "customer");
+      return [
+        {
+          to,
+          template: "orderReturned",
+          payload: { ...payload, depositOutcome, ...(claim !== undefined && { claim }) },
+          dedupeKey: `returned:${orderId}`,
+        },
+      ];
+    };
 
   const move = `${order.status}->${payload.status}`;
   switch (move) {
     case `${RentalStatus.PLACED}->${RentalStatus.CONFIRMED}`: {
       if (!order.respondBy || order.respondBy <= now) {
-        await transition({
-          status: RentalStatus.CANCELLED,
-          cancelReason: CancelReason.NO_PROVIDER_RESPONSE,
-          cancelledAt: now,
-        });
+        await transition(
+          {
+            status: RentalStatus.CANCELLED,
+            cancelReason: CancelReason.NO_PROVIDER_RESPONSE,
+            cancelledAt: now,
+          },
+          (forEmail) =>
+            emailService.cancellationEmails(forEmail, CancelReason.NO_PROVIDER_RESPONSE, [
+              "customer",
+              "provider",
+            ]),
+        );
         throw createError(
           409,
           "This request expired before it was confirmed, so it was cancelled",
         );
       }
-      await transition({
-        status: RentalStatus.CONFIRMED,
-        confirmedAt: now,
-        paymentDueAt: paymentDueFor(order.startDate, now),
-      });
+      const paymentDueAt = paymentDueFor(order.startDate, now);
+      await transition(
+        { status: RentalStatus.CONFIRMED, confirmedAt: now, paymentDueAt },
+        (forEmail) => {
+          const { to, payload } = emailService.orderRecipient(forEmail, "customer");
+          return [
+            {
+              to,
+              template: "orderConfirmed",
+              payload: { ...payload, paymentDueAt: paymentDueAt.toISOString() },
+              dedupeKey: `confirmed:${orderId}`,
+            },
+          ];
+        },
+      );
       break;
     }
 
     case `${RentalStatus.PLACED}->${RentalStatus.CANCELLED}`:
-      await transition({
-        status: RentalStatus.CANCELLED,
-        cancelReason: CancelReason.PROVIDER_DECLINED,
-        cancelNote: payload.note ?? null,
-        cancelledAt: now,
-      });
+      await transition(
+        {
+          status: RentalStatus.CANCELLED,
+          cancelReason: CancelReason.PROVIDER_DECLINED,
+          cancelNote: payload.note ?? null,
+          cancelledAt: now,
+        },
+        (forEmail) =>
+          emailService.cancellationEmails(forEmail, CancelReason.PROVIDER_DECLINED, ["customer"], {
+            note: payload.note,
+          }),
+      );
       break;
 
     case `${RentalStatus.PAID}->${RentalStatus.PICKED_UP}`:
@@ -120,19 +174,26 @@ const updateOrderStatus = async (
         deposit > 0 && order.depositStatus === DepositStatus.HELD;
 
       if (!holdsDeposit) {
-        await transition({ status: RentalStatus.RETURNED, returnedAt: now });
+        await transition(
+          { status: RentalStatus.RETURNED, returnedAt: now },
+          returnedEmail("NONE"),
+        );
         break;
       }
 
       if (payload.condition === "DAMAGED") {
         // An admin reviews the claim before any of the deposit is kept.
-        await transition({
-          status: RentalStatus.RETURNED,
-          returnedAt: now,
-          depositStatus: DepositStatus.CLAIMED,
-          damageClaimAmount: Math.min(payload.damageAmount!, deposit),
-          damageNote: payload.note ?? null,
-        });
+        const claim = Math.min(payload.damageAmount!, deposit);
+        await transition(
+          {
+            status: RentalStatus.RETURNED,
+            returnedAt: now,
+            depositStatus: DepositStatus.CLAIMED,
+            damageClaimAmount: claim,
+            damageNote: payload.note ?? null,
+          },
+          returnedEmail("CLAIMED", claim),
+        );
         break;
       }
 
@@ -161,7 +222,10 @@ const updateOrderStatus = async (
           where: { id: payment.id },
           data: { refundedAmount: { increment: deposit }, refundedAt: now },
         });
+        const forEmail = await emailService.loadOrderForEmail(tx, orderId);
+        await emailService.enqueue(tx, returnedEmail("REFUNDED")(forEmail));
       });
+      emailService.dispatchSoon();
       break;
     }
 

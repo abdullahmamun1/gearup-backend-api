@@ -12,6 +12,9 @@ import { providerRoutes } from "./modules/provider/provider.route";
 import { rentalRoutes } from "./modules/rental/rental.route";
 import { paymentRoutes } from "./modules/payment/payment.route";
 import { reviewRoutes } from "./modules/review/review.route";
+import { contactRoutes } from "./modules/contact/contact.route";
+import { newsletterRoutes } from "./modules/newsletter/newsletter.route";
+import { cronRoutes } from "./modules/cron/cron.route";
 
 const app: Application = express();
 
@@ -42,6 +45,9 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/provider", providerRoutes);
 app.use("/api/rentals", rentalRoutes);
+app.use("/api/contact", contactRoutes);
+app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/cron", cronRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

@@ -5,6 +5,8 @@ export const safeUserSelect = {
   phone: true,
   role: true,
   status: true,
+  emailVerifiedAt: true,
+  marketingEmails: true,
   createdAt: true,
   updatedAt: true,
 } as const;
