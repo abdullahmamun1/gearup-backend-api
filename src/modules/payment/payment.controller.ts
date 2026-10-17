@@ -3,6 +3,8 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { paymentService } from "./payment.service";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
+import { IGetPaymentsQueryParams } from "./payment.service";
 import { createError } from "../../utils/createError";
 
 const createPayment = catchAsync(
@@ -41,7 +43,7 @@ const confirmPayment = catchAsync(
 const getMyPayments = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const customerId = req.user?.id;
-    const query = req.query;
+    const query = getValidatedQuery<IGetPaymentsQueryParams>(req);
     const result = await paymentService.getCustomerPayments(
       customerId as string,
       query,

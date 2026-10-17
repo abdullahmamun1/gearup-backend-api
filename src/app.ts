@@ -1,6 +1,7 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express, { Application, Request, Response } from "express";
+import helmet from "helmet";
 import config from "./config";
 import { authRoutes } from "./modules/auth/auth.route";
 import { globalErrorHandler } from "./middleware/globalErrorHandler";
@@ -13,6 +14,10 @@ import { paymentRoutes } from "./modules/payment/payment.route";
 import { reviewRoutes } from "./modules/review/review.route";
 
 const app: Application = express();
+
+// Behind Vercel's proxy: lets req.ip be the client, not the load balancer.
+app.set("trust proxy", 1);
+app.use(helmet());
 
 app.use("/api/payments/confirm", express.raw({ type: "application/json" }));
 

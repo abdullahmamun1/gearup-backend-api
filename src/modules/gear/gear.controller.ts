@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
 import { catchAsync } from "../../utils/catchAsync";
 import { categoryService } from "../category/category.service";
 import { gearService } from "./gear.service";
@@ -32,9 +33,9 @@ const getAllBrands = catchAsync(
 
 const getAllGearItems = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const query = req.query;
+    const query = getValidatedQuery<IGearQueryParams>(req);
     const gearItems = await gearService.getAllGearItems(
-      query as IGearQueryParams,
+      query,
     );
     sendResponse(res, {
       success: true,
@@ -63,7 +64,7 @@ const getProviderGearItems = catchAsync(
     const providerId = req.user!.id;
     const result = await gearService.getProviderGearItems(
       providerId,
-      req.query as IProviderGearQueryParams,
+      getValidatedQuery<IProviderGearQueryParams>(req),
     );
     sendResponse(res, {
       success: true,

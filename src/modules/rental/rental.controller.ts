@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
 import { rentalService } from "./rental.service";
 import { IGetOrderQueryParams } from "./rental.interface";
 import { Role } from "../../../generated/prisma/enums";
@@ -23,10 +24,10 @@ const createOrder = catchAsync(
 const getOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const customerId = req.user!.id;
-    const query = req.query;
+    const query = getValidatedQuery<IGetOrderQueryParams>(req);
     const orders = await rentalService.getRentalOrders(
       customerId,
-      query as IGetOrderQueryParams,
+      query,
     );
     sendResponse(res, {
       success: true,

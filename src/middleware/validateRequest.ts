@@ -32,3 +32,7 @@ export const validateQuery = (schema: ZodType) =>
     req.validatedQuery = await schema.parseAsync(req.query ?? {});
     next();
   });
+
+/** Reads the query parsed by `validateQuery`, typed for the service it feeds. */
+export const getValidatedQuery = <T>(req: Request) =>
+  (req.validatedQuery ?? {}) as T;

@@ -3,15 +3,16 @@ import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { providerService } from "./provider.service";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
 import { IGetQueryParams } from "./provider.interface";
 
 const getProviderOrders = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const providerId = req.user!.id;
-    const query = req.query;
+    const query = getValidatedQuery<IGetQueryParams>(req);
     const orders = await providerService.getProviderOrders(
       providerId,
-      query as IGetQueryParams,
+      query,
     );
     sendResponse(res, {
       success: true,

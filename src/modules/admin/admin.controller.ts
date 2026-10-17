@@ -2,12 +2,18 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
+import { IGetOrderQueryParams } from "../rental/rental.interface";
+import {
+  IGetAdminGearQueryParams,
+  IGetUsersQueryParams,
+} from "./admin.interface";
 import { categoryService } from "../category/category.service";
 import { adminService } from "./admin.service";
 
 const getAllUsers = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const query = req.query;
+    const query = getValidatedQuery<IGetUsersQueryParams>(req);
     const result = await adminService.getAllUsers(query);
     sendResponse(res, {
       success: true,
@@ -38,7 +44,7 @@ const updateUserStatus = catchAsync(
 
 const getAllGear = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const query = req.query;
+    const query = getValidatedQuery<IGetAdminGearQueryParams>(req);
     const result = await adminService.getAllGear(query);
     sendResponse(res, {
       success: true,
@@ -51,7 +57,7 @@ const getAllGear = catchAsync(
 
 const getAllRentals = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const query = req.query;
+    const query = getValidatedQuery<IGetOrderQueryParams>(req);
     const result = await adminService.getAllRentals(query);
     sendResponse(res, {
       success: true,

@@ -7,7 +7,7 @@ import config from "../../config";
 import { paymentUtils } from "./payment.util";
 import { IGetQueryParams } from "../provider/provider.interface";
 
-interface IGetPaymentsQueryParams extends IGetQueryParams {
+export interface IGetPaymentsQueryParams extends IGetQueryParams {
   status?: PaymentStatus;
 }
 

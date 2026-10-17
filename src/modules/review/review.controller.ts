@@ -2,6 +2,8 @@ import { NextFunction, Request, Response } from "express";
 import httpStatus from "http-status";
 import { catchAsync } from "../../utils/catchAsync";
 import { sendResponse } from "../../utils/sendResponse";
+import { getValidatedQuery } from "../../middleware/validateRequest";
+import { IGetQueryParams } from "../provider/provider.interface";
 import { reviewService } from "./review.service";
 
 const createReview = catchAsync(
@@ -23,7 +25,7 @@ const createReview = catchAsync(
 
 const getReviewsForGear = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const query = req.query;
+    const query = getValidatedQuery<IGetQueryParams>(req);
     const { gearId } = req.params;
     const result = await reviewService.getReviewsForGear(
       gearId as string,

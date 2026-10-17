@@ -9,12 +9,22 @@ async function main() {
   try {
     await prisma.$connect();
     console.log("Connected to database successfully!!");
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
     });
+
+    const shutdown = (signal: string) => {
+      console.log(`${signal} received, shutting down...`);
+      server.close(async () => {
+        await prisma.$disconnect();
+        process.exit(0);
+      });
+    };
+    process.on("SIGTERM", () => shutdown("SIGTERM"));
+    process.on("SIGINT", () => shutdown("SIGINT"));
   } catch (error) {
     console.error("Error starting the server:", error);
-    await prisma.$disconnect;
+    await prisma.$disconnect();
     process.exit(1);
   }
 }
