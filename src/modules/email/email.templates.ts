@@ -197,7 +197,7 @@ const builders: Builders = {
     rows: orderRows(order),
     button:
       order.audience === "customer"
-        ? { label: "Find other gear", url: order.url.replace(/\/customer-dashboard.*$/, "/gear") }
+        ? { label: "Find other gear", url: new URL("/gear", order.url).toString() }
         : { label: "Open your orders", url: order.url },
   }),
 

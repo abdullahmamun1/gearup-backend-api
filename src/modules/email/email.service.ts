@@ -143,8 +143,8 @@ const orderRecipient = (order: OrderForEmail, audience: OrderAudience) => {
     deposit: Number(order.depositAmount),
     url:
       audience === "customer"
-        ? appUrl(`/customer-dashboard/orders/${order.id}`)
-        : appUrl("/provider-dashboard/orders"),
+        ? appUrl(`/dashboard/customer/orders/${order.id}`)
+        : appUrl("/dashboard/provider/orders"),
   };
   return { to: recipient.email, payload };
 };
