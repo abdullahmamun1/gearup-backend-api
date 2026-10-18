@@ -225,17 +225,23 @@ Follow the frontend's [guided installation](https://github.com/abdullahmamun1/ge
 npm run db:seed
 ```
 
-The seed is safe to run again: it never overwrites existing rows. It creates:
-- **6 categories** and **48 gear items** with photos, prices, stock and deposits.
-- **4 providers** in 4 cities, with areas and map pins.
-- **5 customers** and **23 orders** in every status, from returned to cancelled.
-- **16 payments** and **10 reviews**, so ratings and charts have data from the start.
+The seed is safe to run again: every row has a fixed id, existing rows are never changed and nothing is deleted. It creates:
+- **6 categories** and **48 gear items** with photos, prices, stock and deposits. 8 are featured on the home page.
+- **4 providers** in 4 cities (with areas and map pins) and **12 customers** across 7 cities, two of them using Bangla.
+- **166 orders**: 36 hand-written ones covering every status, plus about 10 months of generated history (fixed random seed) that grows month by month. No day ever has more units out than an item owns.
+- **143 payments** and **101 reviews** (one hidden by an admin as spam). 16 items have 3 or more reviews.
+- **Damage claims:** one open, and one each settled as partly kept, fully kept and fully refunded.
+- **Order chats** on 6 orders, with one unread message for `customer1` and one for `provider2`.
+- **Saved gear** for 8 customers, **12 newsletter subscribers** (confirmed, pending and unsubscribed) and **6 contact messages** in every inbox state, including one in Bangla.
+- **AI review summaries** for every item with 3+ reviews, written by Gemini at the end of the seed when `GEMINI_API_KEY` is set (otherwise the daily cron writes them).
+
+Subscriber and contact addresses use `example.com`, so nothing can reach a real inbox.
 
 | Role | Email | Password |
 |---|---|---|
 | Admin | admin@gearup.com | Password123 |
 | Provider | provider1@gearup.com … provider4@gearup.com | Password123 |
-| Customer | customer1@gearup.com … customer5@gearup.com | Password123 |
+| Customer | customer1@gearup.com … customer12@gearup.com | Password123 |
 
 ## API overview
 
