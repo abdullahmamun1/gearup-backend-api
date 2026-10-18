@@ -1,48 +1,18 @@
-import { CancelReason } from "../../../generated/prisma/enums";
+import { CancelReason, Locale } from "../../../generated/prisma/enums";
+import { emailFormat } from "./email.format";
 import { EmailContent, renderEmail } from "./email.layout";
 import { EmailTemplate, IEmailPayloads, IOrderEmail } from "./email.interface";
+import { bnBuilders } from "./email.templates.bn";
 
 // ---------------------------------------------------------- formatting
 
-const money = new Intl.NumberFormat("en-BD", {
-  style: "currency",
-  currency: "BDT",
-  maximumFractionDigits: 0,
-});
-const formatMoney = (amount: number) => money.format(amount);
-
-/** "YYYY-MM-DD" booking day → "Tue, 20 Oct 2026". */
-const formatDay = (key: string) =>
-  new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${key}T00:00:00.000Z`));
-
-/** ISO instant → "20 Oct, 3:00 pm" in Bangladesh time. */
-const formatDeadline = (iso: string) =>
-  `${new Intl.DateTimeFormat("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "Asia/Dhaka",
-  }).format(new Date(iso))} (Bangladesh time)`;
-
-const dayCount = (order: IOrderEmail) =>
-  Math.round(
-    (Date.parse(order.endDate) - Date.parse(order.startDate)) / 86_400_000,
-  );
-
-const itemsLabel = (order: IOrderEmail) =>
-  order.items
-    .map((item) => (item.quantity > 1 ? `${item.quantity} × ${item.name}` : item.name))
-    .join(", ");
-
-const shortId = (order: IOrderEmail) => order.orderId.slice(0, 8);
+const format = emailFormat("en");
+const formatMoney = format.money;
+const formatDay = format.day;
+const formatDeadline = format.deadline;
+const dayCount = format.dayCount;
+const itemsLabel = format.items;
+const shortId = format.shortId;
 
 /** The rows every order email shares. */
 const orderRows = (order: IOrderEmail): [string, string][] => {
@@ -83,11 +53,11 @@ const cancelReasonText = (order: IOrderEmail & { reason: CancelReason }) =>
 
 // ----------------------------------------------------------- templates
 
-type Builders = {
+export type Builders = {
   [K in EmailTemplate]: (payload: IEmailPayloads[K]) => EmailContent;
 };
 
-const builders: Builders = {
+const enBuilders: Builders = {
   verifyEmail: ({ name, url, welcome }) => ({
     subject: welcome ? "Welcome to GearUp — confirm your email" : "Confirm your email address",
     preheader: "One click to confirm it's really you.",
@@ -274,6 +244,50 @@ const builders: Builders = {
     button: { label: "Write a review", url: order.url, tone: "cta" },
   }),
 
+  claimResolved: (order) => {
+    const customer = order.audience === "customer";
+    const outcome =
+      order.kept === 0
+        ? customer
+          ? `Good news: we reviewed the damage claim on your rental and your full ${formatMoney(order.deposit)} deposit has been refunded.`
+          : `We reviewed your damage claim and decided not to keep any of the ${formatMoney(order.deposit)} deposit. It has been refunded to ${order.customerName}.`
+        : order.refunded === 0
+          ? customer
+            ? `We reviewed the damage claim on your rental and upheld it: the ${formatMoney(order.kept)} deposit has been kept to cover the damage.`
+            : `We upheld your damage claim. The full ${formatMoney(order.kept)} deposit is kept to cover the damage.`
+          : customer
+            ? `We reviewed the damage claim on your rental. ${formatMoney(order.kept)} of your deposit is kept to cover the damage and the other ${formatMoney(order.refunded)} has been refunded to your card.`
+            : `We reviewed your damage claim. ${formatMoney(order.kept)} of the deposit is kept to cover the damage and ${formatMoney(order.refunded)} has been refunded to ${order.customerName}.`;
+    return {
+      subject: `Damage claim decided — order ${shortId(order)}`,
+      preheader: "We've reviewed the damage claim.",
+      heading: "The damage claim is settled",
+      paragraphs: [
+        hi(order.recipientName),
+        outcome,
+        ...(order.note ? [`Note from the GearUp team: “${order.note}”`] : []),
+        ...(customer && order.refunded > 0
+          ? ["Refunds usually arrive within 5–10 business days."]
+          : []),
+      ],
+      rows: [
+        ...orderRows(order),
+        ["Deposit kept", formatMoney(order.kept)],
+        ["Deposit refunded", formatMoney(order.refunded)],
+      ],
+      button: { label: "View the order", url: order.url },
+    };
+  },
+
+  newMessage: ({ recipientName, senderName, gearName, preview, url }) => ({
+    subject: `New message from ${senderName} about ${gearName}`,
+    preheader: preview.slice(0, 90),
+    heading: `${senderName} sent you a message`,
+    paragraphs: [hi(recipientName), `“${preview}”`],
+    button: { label: "Open the conversation", url, tone: "primary" },
+    note: "We send at most one of these an hour per conversation. Reply on GearUp, not by email.",
+  }),
+
   contactReceived: ({ name, email, subject, message }) => ({
     subject: `Contact form: ${subject || `message from ${name}`}`,
     preheader: message.slice(0, 90),
@@ -298,6 +312,18 @@ const builders: Builders = {
     ],
   }),
 
+  contactReply: ({ name, subject, reply, original }) => ({
+    subject: subject ? `Re: ${subject}` : "Re: your message to GearUp",
+    preheader: reply.slice(0, 90),
+    heading: "A reply from the GearUp team",
+    paragraphs: [
+      hi(name),
+      ...reply.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean),
+      `You wrote: “${original.length > 400 ? `${original.slice(0, 400)}…` : original}”`,
+    ],
+    note: "You can reply to this email, or send us a new message from the contact page.",
+  }),
+
   newsletterConfirm: ({ url, unsubscribeUrl }) => ({
     subject: "Confirm your GearUp newsletter subscription",
     preheader: "One click and you're in.",
@@ -311,7 +337,11 @@ const builders: Builders = {
   }),
 };
 
+const BUILDERS: Record<Locale, Builders> = { en: enBuilders, bn: bnBuilders };
+
+/** Renders in the recipient's language (rendered at send time). */
 export const renderTemplate = <K extends EmailTemplate>(
   template: K,
   payload: IEmailPayloads[K],
-) => renderEmail(builders[template](payload));
+  locale: Locale = "en",
+) => renderEmail(BUILDERS[locale][template](payload), locale);

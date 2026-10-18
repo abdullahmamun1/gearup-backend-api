@@ -22,28 +22,28 @@ const loginUser = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
     const payload = req.body;
 
-    const { accessToken, refreshToken } = await authService.loginUser(payload);
+    const { accessToken, refreshToken, locale } =
+      await authService.loginUser(payload);
 
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
       message: "User is logged in succesfully",
-      data: { accessToken, refreshToken },
+      data: { accessToken, refreshToken, locale },
     });
   },
 );
 
 const loginWithGoogle = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const { accessToken, refreshToken } = await authService.loginWithGoogle(
-      req.body,
-    );
+    const { accessToken, refreshToken, locale } =
+      await authService.loginWithGoogle(req.body);
 
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,
       message: "User is logged in succesfully",
-      data: { accessToken, refreshToken },
+      data: { accessToken, refreshToken, locale },
     });
   },
 );

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { Locale } from "../../../generated/prisma/enums";
 
 const createMessage = z.object({
   name: z
@@ -17,6 +18,8 @@ const createMessage = z.object({
     .trim()
     .min(10, "Message must be at least 10 characters")
     .max(2000, "Message must be at most 2000 characters"),
+  /** The page language, for the emails that follow. */
+  locale: z.enum(Locale, { error: "Language must be en or bn" }).optional(),
 });
 
 export const contactValidation = { createMessage };

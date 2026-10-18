@@ -10,6 +10,7 @@ import {
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { daysBetween, parseDateKey, today } from "../../utils/dates";
+import { approximate } from "../../utils/geo";
 import { emailService, orderEmailInclude } from "../email/email.service";
 import { paymentUtils } from "../payment/payment.util";
 import { rentalAvailability } from "./rental.availability";
@@ -274,8 +275,33 @@ const getRentalOrderById = async (
   if (role !== Role.ADMIN && !isOwner && !isProvider) {
     throw createError(403, "You do not have access to this order");
   }
-  return order;
+
+  // Where to collect the gear: the exact point once the order is paid,
+  // only the neighbourhood before that.
+  const place = await prisma.user.findUnique({
+    where: { id: order.providerId },
+    select: { city: true, area: true, latitude: true, longitude: true },
+  });
+  const exact = PICKUP_REVEALED.includes(order.status);
+  const pickup = place && {
+    city: place.city,
+    area: place.area,
+    exact,
+    location: exact
+      ? place.latitude !== null && place.longitude !== null
+        ? { latitude: place.latitude, longitude: place.longitude }
+        : null
+      : approximate(place.latitude, place.longitude),
+  };
+  return { ...order, pickup };
 };
+
+/** Statuses where the customer has paid and needs the real pickup point. */
+const PICKUP_REVEALED: RentalStatus[] = [
+  RentalStatus.PAID,
+  RentalStatus.PICKED_UP,
+  RentalStatus.RETURNED,
+];
 
 // ----------------------------------------------------------- cancel
 

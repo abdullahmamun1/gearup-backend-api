@@ -15,6 +15,14 @@ import { reviewRoutes } from "./modules/review/review.route";
 import { contactRoutes } from "./modules/contact/contact.route";
 import { newsletterRoutes } from "./modules/newsletter/newsletter.route";
 import { cronRoutes } from "./modules/cron/cron.route";
+import { aiRoutes } from "./modules/ai/ai.route";
+import { favoriteRoutes } from "./modules/favorite/favorite.route";
+import { messageRoutes } from "./modules/message/message.route";
+import { providerProfileRoutes } from "./modules/providerProfile/providerProfile.route";
+import { uploadRoutes } from "./modules/upload/upload.route";
+import { reportRoutes } from "./modules/report/report.route";
+import { claimRoutes } from "./modules/claim/claim.route";
+import { inboxRoutes } from "./modules/inbox/inbox.route";
 
 const app: Application = express();
 
@@ -40,7 +48,7 @@ app.get("/", (req: Request, res: Response) => {
 
 app.use("/api/", gearRoutes);
 app.use("/api/", reviewRoutes);
-app.use("/api/admin", adminRoutes);
+app.use("/api/admin", adminRoutes, reportRoutes, claimRoutes, inboxRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/provider", providerRoutes);
@@ -48,6 +56,12 @@ app.use("/api/rentals", rentalRoutes);
 app.use("/api/contact", contactRoutes);
 app.use("/api/newsletter", newsletterRoutes);
 app.use("/api/cron", cronRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/favorites", favoriteRoutes);
+app.use("/api/uploads", uploadRoutes);
+app.use("/api/providers", providerProfileRoutes);
+// Order threads (/rentals/:orderId/messages) and /messages/unread.
+app.use("/api", messageRoutes);
 
 app.use(notFound);
 app.use(globalErrorHandler);

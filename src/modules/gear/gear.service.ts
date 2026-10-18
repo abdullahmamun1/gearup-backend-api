@@ -3,6 +3,12 @@ import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { assertEmailVerified } from "../auth/auth.service";
 import { addDays, daysBetween, parseDateKey, today } from "../../utils/dates";
+import {
+  approximate,
+  boundingBox,
+  haversineKm,
+  parseLatLng,
+} from "../../utils/geo";
 import { rentalAvailability } from "../rental/rental.availability";
 import { RENTAL_POLICY } from "../rental/rental.policy";
 import {
@@ -12,6 +18,9 @@ import {
   IProviderGearQueryParams,
   IUpdateGearItemPayload,
 } from "./gear.interface";
+
+/** Search radius when `near` is given without one. */
+const DEFAULT_RADIUS_KM = 25;
 
 const getAllGearItems = async (query: IGearQueryParams) => {
   const limit = query.limit ? Number(query.limit) : 10;
@@ -58,8 +67,30 @@ const getAllGearItems = async (query: IGearQueryParams) => {
     });
   }
 
+  if (query.city) {
+    andConditions.push({
+      provider: { city: { equals: query.city, mode: "insensitive" } },
+    });
+  }
+  const near = parseLatLng(query.near);
+  const radiusKm = query.radius ?? DEFAULT_RADIUS_KM;
+  if (near) {
+    // Cheap box first; the exact distance is checked below.
+    const box = boundingBox(near, radiusKm);
+    andConditions.push({
+      provider: {
+        latitude: { gte: box.minLat, lte: box.maxLat },
+        longitude: { gte: box.minLng, lte: box.maxLng },
+      },
+    });
+  }
+
   const where: GearItemWhereInput = { AND: andConditions };
-  const orderBy = { [sortBy]: sortOrder };
+  // "featured": admin-picked gear first, then newest.
+  const orderBy =
+    sortBy === "featured"
+      ? [{ isFeatured: "desc" as const }, { createdAt: "desc" as const }]
+      : { [sortBy]: sortOrder };
   const include = {
     category: true,
     provider: {
@@ -67,41 +98,75 @@ const getAllGearItems = async (query: IGearQueryParams) => {
         id: true,
         name: true,
         email: true,
+        avatarUrl: true,
+        city: true,
+        area: true,
+        latitude: true,
+        longitude: true,
       },
     },
   };
 
   let gearItems;
   let totalCount;
+  const distanceById = new Map<string, number>();
   const range = parseDateRange(query.from, query.to);
-  if (range) {
-    // Availability depends on bookings, not columns, so filter in memory:
-    // every match's free units for the range, then paginate what's left.
+  if (range || near) {
+    // Availability depends on bookings and distance on maths, not columns,
+    // so filter the matches in memory, then paginate what's left.
     const candidates = await prisma.gearItem.findMany({
       where,
       orderBy,
-      select: { id: true, stock: true, isAvailable: true },
+      select: {
+        id: true,
+        stock: true,
+        isAvailable: true,
+        provider: { select: { latitude: true, longitude: true } },
+      },
     });
-    const free = await rentalAvailability.availableUnits(
-      prisma,
-      candidates,
-      range.from,
-      range.to,
-    );
-    const ids = candidates
-      .filter((gear) => (free.get(gear.id) ?? 0) > 0)
-      .map((gear) => gear.id);
+    let matches = candidates;
+    if (range) {
+      const free = await rentalAvailability.availableUnits(
+        prisma,
+        candidates,
+        range.from,
+        range.to,
+      );
+      matches = matches.filter((gear) => (free.get(gear.id) ?? 0) > 0);
+    }
+    if (near) {
+      for (const gear of matches) {
+        const { latitude, longitude } = gear.provider;
+        if (latitude !== null && longitude !== null) {
+          distanceById.set(gear.id, haversineKm(near, { latitude, longitude }));
+        }
+      }
+      matches = matches
+        .filter((gear) => (distanceById.get(gear.id) ?? Infinity) <= radiusKm)
+        // Nearest first; ties keep the requested sort order.
+        .sort((a, b) => distanceById.get(a.id)! - distanceById.get(b.id)!);
+    }
+    const ids = matches.map((gear) => gear.id);
     const pageIds = ids.slice(skip, skip + limit);
     const rows = await prisma.gearItem.findMany({
       where: { id: { in: pageIds } },
       include,
+      omit: { reviewSummary: true },
     });
     const rowById = new Map(rows.map((row) => [row.id, row]));
     gearItems = pageIds.map((id) => rowById.get(id)!).filter(Boolean);
     totalCount = ids.length;
   } else {
     [gearItems, totalCount] = await Promise.all([
-      prisma.gearItem.findMany({ where, take: limit, skip, orderBy, include }),
+      prisma.gearItem.findMany({
+        where,
+        take: limit,
+        skip,
+        orderBy,
+        include,
+        // The review digest is for the detail page only.
+        omit: { reviewSummary: true },
+      }),
       prisma.gearItem.count({ where }),
     ]);
   }
@@ -110,6 +175,7 @@ const getAllGearItems = async (query: IGearQueryParams) => {
     by: ["gearItemId"],
     where: {
       gearItemId: { in: gearItems.map((item) => item.id) },
+      isHidden: false,
     },
     _avg: { rating: true },
     _count: { rating: true },
@@ -124,7 +190,11 @@ const getAllGearItems = async (query: IGearQueryParams) => {
   return {
     data: gearItems.map((item) => ({
       ...item,
+      provider: publicProvider(item.provider),
       rating: ratingByGear.get(item.id) ?? { average: null, count: 0 },
+      ...(distanceById.has(item.id) && {
+        distanceKm: Math.round(distanceById.get(item.id)! * 10) / 10,
+      }),
     })),
     meta: {
       page,
@@ -188,7 +258,7 @@ const getGearItemById = async (gearId: string) => {
         select: {
           id: true,
           name: true,
-          email: true,
+          email: true, avatarUrl: true, city: true, area: true, latitude: true, longitude: true,
         },
       },
     },
@@ -196,8 +266,23 @@ const getGearItemById = async (gearId: string) => {
   if (!gearItem) {
     throw createError(404, "Gear item not found");
   }
-  return gearItem;
+  return { ...gearItem, provider: publicProvider(gearItem.provider) };
 };
+
+/**
+ * Swap a provider's exact pickup point for an approximate one before it
+ * leaves the API publicly.
+ */
+const publicProvider = <
+  T extends { latitude: number | null; longitude: number | null },
+>({
+  latitude,
+  longitude,
+  ...provider
+}: T) => ({
+  ...provider,
+  location: approximate(latitude, longitude),
+});
 
 const getAllBrands = async () => {
   const rows = await prisma.gearItem.findMany({
@@ -346,7 +431,45 @@ const deleteGearItem = async (providerId: string, gearId: string) => {
   });
 };
 
+/** Gear with category, provider and rating: the shape GearCard expects. */
+const getGearCards = async (ids: string[]) => {
+  if (ids.length === 0) return [];
+  const [rows, ratings] = await Promise.all([
+    prisma.gearItem.findMany({
+      where: { id: { in: ids } },
+      include: {
+        category: true,
+        provider: { select: { id: true, name: true, avatarUrl: true, city: true } },
+      },
+      omit: { reviewSummary: true },
+    }),
+    prisma.review.groupBy({
+      by: ["gearItemId"],
+      where: { gearItemId: { in: ids }, isHidden: false },
+      _avg: { rating: true },
+      _count: { rating: true },
+    }),
+  ]);
+  const ratingById = new Map(
+    ratings.map((row) => [
+      row.gearItemId,
+      { average: row._avg.rating, count: row._count.rating },
+    ]),
+  );
+  const rowById = new Map(rows.map((row) => [row.id, row]));
+  // Keep the AI's order: it ranks the best fit first.
+  return ids
+    .map((id) => rowById.get(id))
+    .filter((row) => row !== undefined)
+    .map((row) => ({
+      ...row,
+      rating: ratingById.get(row.id) ?? { average: null, count: 0 },
+    }));
+};
+
 export const gearService = {
+  getGearCards,
+  parseDateRange,
   getAllGearItems,
   getGearItemById,
   getGearAvailability,

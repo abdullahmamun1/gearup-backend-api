@@ -1,0 +1,12 @@
+/// A customer's saved gear (wishlist).
+model Favorite {
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gearItemId String
+  gearItem   GearItem @relation(fields: [gearItemId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@id([userId, gearItemId])
+  @@index([gearItemId])
+  @@map("favorites")
+}

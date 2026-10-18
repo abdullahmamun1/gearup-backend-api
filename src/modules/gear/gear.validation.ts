@@ -68,7 +68,7 @@ const gearQuery = z.object({
     })
     .optional(),
   sortBy: z
-    .enum(["name", "pricePerDay", "stock", "createdAt"], {
+    .enum(["name", "pricePerDay", "stock", "createdAt", "featured"], {
       error: "Cannot sort by that field",
     })
     .optional(),
@@ -78,6 +78,18 @@ const gearQuery = z.object({
   /** Only gear with at least one unit free on every day of [from, to). */
   from: dateKeyField("From date").optional(),
   to: dateKeyField("To date").optional(),
+  /** Providers in this city (case-insensitive). */
+  city: z.string().trim().max(60).optional(),
+  /** "lat,lng": gear within `radius` km of this point, nearest first. */
+  near: z
+    .string()
+    .regex(/^-?\d{1,2}(\.\d+)?,-?\d{1,3}(\.\d+)?$/, "near must be lat,lng")
+    .optional(),
+  radius: z.coerce
+    .number("radius must be a number")
+    .min(1, "radius must be at least 1 km")
+    .max(300, "radius must be at most 300 km")
+    .optional(),
   ...paginationQueryFields,
 });
 
@@ -88,6 +100,15 @@ const providerGearQuery = gearQuery.omit({
   maxPrice: true,
   from: true,
   to: true,
+  city: true,
+  near: true,
+  radius: true,
+}).extend({
+  sortBy: z
+    .enum(["name", "pricePerDay", "stock", "createdAt"], {
+      error: "Cannot sort by that field",
+    })
+    .optional(),
 });
 
 const availabilityQuery = z.object({

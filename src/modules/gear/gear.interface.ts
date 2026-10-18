@@ -11,6 +11,11 @@ export interface IGearQueryParams {
   sortOrder?: "asc" | "desc";
   from?: string;
   to?: string;
+  city?: string;
+  /** "lat,lng" */
+  near?: string;
+  /** Kilometres around `near`; defaults to 25. */
+  radius?: number;
 }
 
 export interface IProviderGearQueryParams {

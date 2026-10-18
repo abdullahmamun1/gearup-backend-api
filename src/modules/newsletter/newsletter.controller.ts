@@ -6,7 +6,7 @@ import { newsletterService } from "./newsletter.service";
 
 const subscribe = catchAsync(
   async (req: Request, res: Response, next: NextFunction) => {
-    const result = await newsletterService.subscribe(req.body.email);
+    const result = await newsletterService.subscribe(req.body.email, req.body.locale);
     sendResponse(res, {
       success: true,
       statusCode: httpStatus.OK,

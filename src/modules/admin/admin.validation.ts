@@ -58,7 +58,55 @@ const rentalsQuery = z.object({
   ...paginationQueryFields,
 });
 
+const reviewsQuery = z.object({
+  visibility: z
+    .enum(["visible", "hidden"], { error: "Visibility must be visible or hidden" })
+    .optional(),
+  rating: z.coerce
+    .number("Rating must be a number")
+    .int()
+    .min(1, "Rating must be 1–5")
+    .max(5, "Rating must be 1–5")
+    .optional(),
+  searchTerm: z
+    .string()
+    .trim()
+    .max(100, "Search term must be at most 100 characters")
+    .optional(),
+  ...paginationQueryFields,
+});
+
+const reviewParams = z.object({ reviewId: uuidField("Review ID") });
+
+const moderateReview = z.object({
+  isHidden: z.boolean({ error: "isHidden must be true or false" }),
+});
+
+const gearParams = z.object({ gearId: uuidField("Gear ID") });
+
+const featureGear = z.object({
+  isFeatured: z.boolean({ error: "isFeatured must be true or false" }),
+});
+
+const subscribersQuery = z.object({
+  status: z
+    .enum(["confirmed", "pending", "unsubscribed"], { error: "Unknown status" })
+    .optional(),
+  searchTerm: z
+    .string()
+    .trim()
+    .max(100, "Search term must be at most 100 characters")
+    .optional(),
+  ...paginationQueryFields,
+});
+
 export const adminValidation = {
+  reviewsQuery,
+  reviewParams,
+  moderateReview,
+  gearParams,
+  featureGear,
+  subscribersQuery,
   updateUserStatus,
   createCategory,
   updateCategory,

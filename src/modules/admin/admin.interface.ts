@@ -12,3 +12,18 @@ export interface IGetAdminGearQueryParams {
   category?: string;
   isAvailable?: string;
 }
+
+export interface IGetAdminReviewsQueryParams {
+  page?: string;
+  limit?: string;
+  visibility?: "visible" | "hidden";
+  rating?: number;
+  searchTerm?: string;
+}
+
+export interface IGetSubscribersQueryParams {
+  page?: string;
+  limit?: string;
+  status?: "confirmed" | "pending" | "unsubscribed";
+  searchTerm?: string;
+}

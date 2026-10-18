@@ -41,7 +41,10 @@ enum DepositStatus {
   HELD
   REFUNDED
   PARTIALLY_REFUNDED
+  /// Damage claim under admin review.
   CLAIMED
+  /// Claim upheld in full: the whole deposit was kept.
+  KEPT
 }
 
 enum EmailStatus {
@@ -60,4 +63,10 @@ enum ContactStatus {
   NEW
   REPLIED
   ARCHIVED
+}
+
+/// Interface and email language.
+enum Locale {
+  en
+  bn
 }

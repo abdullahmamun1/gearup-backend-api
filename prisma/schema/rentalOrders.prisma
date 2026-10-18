@@ -14,6 +14,11 @@ model RentalOrder {
   depositStatus     DepositStatus @default(NONE)
   damageClaimAmount Decimal?      @db.Decimal(10, 2)
   damageNote        String?
+  /// When an admin settled the damage claim (CLAIMED → REFUNDED, PARTIALLY_REFUNDED or KEPT).
+  claimResolvedAt   DateTime?
+  /// What the admin decided to keep (0 to the whole deposit), and why.
+  claimKeptAmount   Decimal?      @db.Decimal(10, 2)
+  claimResolutionNote String?
 
   customerId String
   customer   User   @relation("CustomerOrders", fields: [customerId], references: [id])
@@ -37,6 +42,7 @@ model RentalOrder {
   items    OrderItem[]
   payments Payment[]
   review   Review?
+  messages Message[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

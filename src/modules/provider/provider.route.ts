@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { providerController } from "./provider.controller";
+import { statsController } from "../stats/stats.controller";
 import { auth } from "../../middleware/auth";
 import { Role } from "../../../generated/prisma/client";
 import {
@@ -11,6 +12,8 @@ import { providerValidation } from "./provider.validation";
 const router = Router();
 
 router.use(auth(Role.PROVIDER));
+
+router.get("/stats", statsController.getProviderStats);
 
 router.get(
   "/orders",

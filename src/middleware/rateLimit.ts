@@ -62,11 +62,39 @@ export const oauthLimiter = createLimiter(
   "Too many sign-in attempts. Please wait a minute and try again.",
 );
 
-/** Gemini-backed endpoints — protects the free quota. */
+/**
+ * The visitor behind a public AI request. The frontend calls from its own
+ * servers, so it forwards the visitor's IP in `x-client-ip`; anyone can set
+ * that header, which is why `aiGlobalLimiter` caps the total as well.
+ */
+const aiKey = (req: Request) => {
+  if (req.user) return `user:${req.user.id}`;
+  const forwarded = req.get("x-client-ip")?.trim().slice(0, 64);
+  return forwarded ? `client:${forwarded}` : ipKeyGenerator(req.ip ?? "unknown");
+};
+
+/** Gemini-backed endpoints, per visitor. */
 export const aiLimiter = createLimiter(
   MINUTE,
-  10,
+  8,
+  "You're asking quickly — give the AI assistant a minute and try again.",
+  aiKey,
+);
+
+/** Search-box suggestions, per visitor (debounced and cached client-side). */
+export const aiSuggestLimiter = createLimiter(
+  MINUTE,
+  20,
+  "Slow down a little — suggestions will be back in a moment.",
+  aiKey,
+);
+
+/** Every AI request together: keeps the whole site under the free quota. */
+export const aiGlobalLimiter = createLimiter(
+  MINUTE,
+  30,
   "The AI assistant is busy. Please try again in a minute.",
+  () => "global",
 );
 
 /**

@@ -3,6 +3,7 @@ import { Role } from "../../../generated/prisma/enums";
 import { adminController } from "./admin.controller";
 import { auth } from "../../middleware/auth";
 import {
+  validateParams,
   validateQuery,
   validateRequest,
 } from "../../middleware/validateRequest";
@@ -28,6 +29,12 @@ router.get(
   validateQuery(adminValidation.gearQuery),
   adminController.getAllGear,
 );
+router.patch(
+  "/gear/:gearId",
+  validateParams(adminValidation.gearParams),
+  validateRequest(adminValidation.featureGear),
+  adminController.setGearFeatured,
+);
 router.get(
   "/rentals",
   validateQuery(adminValidation.rentalsQuery),
@@ -45,5 +52,23 @@ router.patch(
   adminController.updateCategory,
 );
 router.delete("/category/:categoryId", adminController.deleteCategory);
+
+router.get(
+  "/reviews",
+  validateQuery(adminValidation.reviewsQuery),
+  adminController.getAllReviews,
+);
+router.patch(
+  "/reviews/:reviewId",
+  validateParams(adminValidation.reviewParams),
+  validateRequest(adminValidation.moderateReview),
+  adminController.moderateReview,
+);
+
+router.get(
+  "/subscribers",
+  validateQuery(adminValidation.subscribersQuery),
+  adminController.getSubscribers,
+);
 
 export const adminRoutes = router;

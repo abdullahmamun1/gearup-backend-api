@@ -30,4 +30,21 @@ export default {
   admin_email: process.env.ADMIN_EMAIL,
   /** Vercel sends it as `Authorization: Bearer <CRON_SECRET>`. */
   cron_secret: process.env.CRON_SECRET,
+  /** Signed direct uploads from the browser. Missing: uploads answer 503. */
+  cloudinary: {
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  },
+  gemini: {
+    /** Free key from Google AI Studio. Without it the AI endpoints answer 503. */
+    api_key: process.env.GEMINI_API_KEY,
+    /**
+     * An alias that follows Google's current free Flash-Lite model: fast
+     * enough for chat (full Flash with thinking took ~5x longer).
+     */
+    model: process.env.GEMINI_MODEL || "gemini-flash-lite-latest",
+    /** MINIMAL, LOW, MEDIUM or HIGH. Lower answers faster. */
+    thinking: (process.env.GEMINI_THINKING || "LOW").toUpperCase(),
+  },
 };

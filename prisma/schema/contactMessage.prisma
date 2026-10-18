@@ -5,6 +5,14 @@ model ContactMessage {
   subject String?
   message String
   status  ContactStatus @default(NEW)
+  /// The page language, for the auto-reply and the admin's reply.
+  locale  Locale        @default(en)
+
+  /// When an admin first opened it (unread until then).
+  readAt    DateTime?
+  /// The reply sent from the admin inbox, if any.
+  replyBody String?
+  repliedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

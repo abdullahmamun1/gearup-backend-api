@@ -1,6 +1,7 @@
 import { RentalStatus } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { DAY_MS, addDays, today } from "../../utils/dates";
+import { aiService } from "../ai/ai.service";
 import { authTokens } from "../auth/auth.tokens";
 import { EmailMessage } from "../email/email.interface";
 import { emailService, orderEmailInclude } from "../email/email.service";
@@ -69,6 +70,8 @@ const runDaily = async () => {
   const reviewRequests = await queueReviewRequests();
   const recoveredEmails = await emailService.recoverStuck();
   const purgedTokens = await authTokens.purgeOld();
+  // A few at a time keeps the run short and inside the free AI quota.
+  const reviewSummaries = await aiService.refreshStaleSummaries(10);
 
   let sent = 0;
   let failed = 0;
@@ -85,6 +88,7 @@ const runDaily = async () => {
     reviewRequests,
     recoveredEmails,
     purgedTokens,
+    reviewSummaries,
     emails: { sent, failed },
   };
 };

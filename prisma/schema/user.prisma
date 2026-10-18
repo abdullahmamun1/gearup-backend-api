@@ -6,6 +6,8 @@ model User {
   googleId     String? @unique
 
   phone  String?
+  /// Interface and email language.
+  locale Locale  @default(en)
   role   Role
   status UserStatus @default(ACTIVE)
 
@@ -14,6 +16,18 @@ model User {
   /// Tokens issued before this are rejected (signs out other devices).
   passwordChangedAt DateTime?
   marketingEmails   Boolean   @default(true)
+
+  /// Public profile (providers mainly; customers can set an avatar).
+  avatarUrl String?
+  bio       String?
+  /// One of the cities in the frontend's list, e.g. "Sylhet".
+  city      String?
+  /// Neighbourhood shown publicly, e.g. "Zindabazar".
+  area      String?
+  /// Pickup point, picked on a map. Shown only approximately until an
+  /// order is paid.
+  latitude  Float?
+  longitude Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -25,6 +39,9 @@ model User {
   reviews        Review[]      @relation("CustomerReviews")
   payments       Payment[]     @relation("CustomerPayments")
   authTokens     AuthToken[]
+  favorites      Favorite[]
+  messages       Message[]     @relation("SentMessages")
 
+  @@index([latitude, longitude])
   @@map("users")
 }

@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { Locale } from "../../../generated/prisma/enums";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { toDateKey } from "../../utils/dates";
@@ -8,7 +9,7 @@ import { emailService } from "../email/email.service";
  * Double opt-in: nobody is subscribed until they click the emailed link.
  * Returns "subscribed" when the address is already confirmed.
  */
-const subscribe = async (rawEmail: string) => {
+const subscribe = async (rawEmail: string, locale?: Locale) => {
   const email = rawEmail.trim().toLowerCase();
   const existing = await prisma.subscriber.findUnique({ where: { email } });
   if (existing?.confirmedAt && !existing.unsubscribedAt) {
@@ -19,8 +20,8 @@ const subscribe = async (rawEmail: string) => {
   await prisma.$transaction(async (tx) => {
     await tx.subscriber.upsert({
       where: { email },
-      update: {},
-      create: { email, token },
+      update: { ...(locale !== undefined && { locale }) },
+      create: { email, token, ...(locale !== undefined && { locale }) },
     });
     await emailService.enqueue(tx, [
       {
@@ -29,6 +30,7 @@ const subscribe = async (rawEmail: string) => {
         payload: {
           url: emailService.appUrl(`/newsletter/confirm?token=${token}`),
           unsubscribeUrl: emailService.appUrl(`/newsletter/unsubscribe?token=${token}`),
+          ...(locale !== undefined && { locale }),
         },
         // At most one confirmation email per address per day.
         dedupeKey: `newsletter-confirm:${email}:${toDateKey(new Date())}`,

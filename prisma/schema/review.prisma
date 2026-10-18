@@ -12,8 +12,13 @@ model Review {
   rentalOrderId String      @unique
   rentalOrder   RentalOrder @relation(fields: [rentalOrderId], references: [id])
 
+  /// Hidden by an admin: left out of public lists, ratings and AI summaries.
+  isHidden Boolean   @default(false)
+  hiddenAt DateTime?
+
   createdAt DateTime @default(now())
 
   @@index([gearItemId])
+  @@index([isHidden])
   @@map("reviews")
 }

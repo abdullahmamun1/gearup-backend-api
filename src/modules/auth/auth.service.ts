@@ -65,7 +65,7 @@ const assertNotSuspended = (user: Pick<UserModel, "status">) => {
 };
 
 const registerUser = async (payload: ICreateUserPayload) => {
-  const { name, email, password, phone, role } = payload;
+  const { name, email, password, phone, role, locale } = payload;
   const hashedPassword = await bcrypt.hash(
     password,
     Number(config.bcrypt_salt_rounds),
@@ -79,6 +79,7 @@ const registerUser = async (payload: ICreateUserPayload) => {
         passwordHash: hashedPassword,
         phone,
         role,
+        ...(locale !== undefined && { locale }),
       },
       select: safeUserSelect,
     });
@@ -123,11 +124,12 @@ const loginUser = async (payload: ILoginPayload) => {
   }
   assertNotSuspended(user);
 
-  return issueTokens(user);
+  // The saved language comes back with the tokens: the frontend lands there.
+  return { ...issueTokens(user), locale: user.locale };
 };
 
 const loginWithGoogle = async (payload: IGoogleLoginPayload) => {
-  const { code, codeVerifier, redirectUri, role } = payload;
+  const { code, codeVerifier, redirectUri, role, locale } = payload;
 
   const profile = await googleOAuth.getProfile(code, codeVerifier, redirectUri);
 
@@ -157,11 +159,12 @@ const loginWithGoogle = async (payload: IGoogleLoginPayload) => {
         emailVerifiedAt: new Date(),
         passwordHash: null,
         role: role ?? "CUSTOMER",
+        ...(locale !== undefined && { locale }),
       },
     });
   }
 
-  return issueTokens(user);
+  return { ...issueTokens(user), locale: user.locale };
 };
 
 const refreshToken = async (token: string) => {
@@ -205,14 +208,22 @@ const updateProfile = async (
   userId: string,
   payload: IUpdateProfilePayload,
 ) => {
-  const { name, phone, marketingEmails } = payload;
+  const { name, phone, marketingEmails, latitude, longitude } = payload;
+  const text = (value: string | undefined) =>
+    value === undefined ? undefined : value === "" ? null : value;
 
   const user = await prisma.user.update({
     where: { id: userId },
     data: {
       ...(name !== undefined && { name }),
-      ...(phone !== undefined && { phone: phone === "" ? null : phone }),
+      ...(phone !== undefined && { phone: text(phone) }),
       ...(marketingEmails !== undefined && { marketingEmails }),
+      ...(payload.locale !== undefined && { locale: payload.locale }),
+      ...(payload.avatarUrl !== undefined && { avatarUrl: text(payload.avatarUrl) }),
+      ...(payload.bio !== undefined && { bio: text(payload.bio) }),
+      ...(payload.city !== undefined && { city: text(payload.city) }),
+      ...(payload.area !== undefined && { area: text(payload.area) }),
+      ...(latitude !== undefined && { latitude, longitude }),
     },
     select: safeUserSelect,
   });

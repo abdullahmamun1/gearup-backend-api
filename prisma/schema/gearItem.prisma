@@ -26,6 +26,12 @@ model GearItem {
 
   orderItems OrderItem[]
   reviews    Review[]
+  favorites  Favorite[]
+
+  /// AI digest of the reviews: { summary, pros[], cons[] }. Written when a
+  /// review arrives (3+ reviews), so page views never call the AI.
+  reviewSummary   Json?
+  reviewSummaryAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

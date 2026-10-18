@@ -1,4 +1,4 @@
-import { CancelReason, UserStatus } from "../../../generated/prisma/enums";
+import { CancelReason, UserStatus, Locale } from "../../../generated/prisma/enums";
 
 export type OrderAudience = "customer" | "provider";
 
@@ -40,6 +40,18 @@ export interface IEmailPayloads {
     claim?: number;
   };
   reviewRequest: IOrderEmail;
+  /** An admin settled a damage claim. */
+  claimResolved: IOrderEmail & { kept: number; refunded: number; note?: string | null };
+
+  newMessage: {
+    recipientName: string;
+    senderName: string;
+    /** First item on the order, for context. */
+    gearName: string;
+    /** The start of the message (the whole thread is on the site). */
+    preview: string;
+    url: string;
+  };
 
   contactReceived: {
     name: string;
@@ -47,8 +59,16 @@ export interface IEmailPayloads {
     subject?: string | null;
     message: string;
   };
-  contactAutoReply: { name: string; message: string };
-  newsletterConfirm: { url: string; unsubscribeUrl: string };
+  contactAutoReply: { name: string; message: string; locale?: Locale };
+  /** The admin's answer to a contact form message. */
+  contactReply: {
+    name: string;
+    subject?: string | null;
+    reply: string;
+    original: string;
+    locale?: Locale;
+  };
+  newsletterConfirm: { url: string; unsubscribeUrl: string; locale?: Locale };
 }
 
 export type EmailTemplate = keyof IEmailPayloads;

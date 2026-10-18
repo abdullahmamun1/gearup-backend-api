@@ -1,6 +1,10 @@
 import { waitUntil } from "@vercel/functions";
 import { Prisma } from "../../../generated/prisma/client";
-import { CancelReason, EmailStatus } from "../../../generated/prisma/enums";
+import {
+  CancelReason,
+  EmailStatus,
+  Locale,
+} from "../../../generated/prisma/enums";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
 import { sendMail } from "../../lib/mailer";
@@ -49,6 +53,19 @@ const dispatchDue = async (limit = BATCH_SIZE) => {
     take: limit,
   });
 
+  // Each email goes out in its recipient's language: an explicit `locale` in
+  // the payload (people without accounts), else the account's, else English.
+  const accounts = await prisma.user.findMany({
+    where: { email: { in: [...new Set(due.map((row) => row.to))] } },
+    select: { email: true, locale: true },
+  });
+  const accountLocale = new Map(accounts.map((user) => [user.email, user.locale]));
+  const localeFor = (row: (typeof due)[number]): Locale => {
+    const requested = (row.payload as { locale?: unknown } | null)?.locale;
+    if (requested === "en" || requested === "bn") return requested;
+    return accountLocale.get(row.to) ?? "en";
+  };
+
   let sent = 0;
   let failed = 0;
   for (const row of due) {
@@ -63,6 +80,7 @@ const dispatchDue = async (limit = BATCH_SIZE) => {
       const email = renderTemplate(
         row.template as EmailTemplate,
         row.payload as unknown as IEmailPayloads[EmailTemplate],
+        localeFor(row),
       );
       await sendMail({ to: row.to, ...email });
       await prisma.emailOutbox.update({
@@ -144,7 +162,7 @@ const orderRecipient = (order: OrderForEmail, audience: OrderAudience) => {
     url:
       audience === "customer"
         ? appUrl(`/dashboard/customer/orders/${order.id}`)
-        : appUrl("/dashboard/provider/orders"),
+        : appUrl(`/dashboard/provider/orders/${order.id}`),
   };
   return { to: recipient.email, payload };
 };

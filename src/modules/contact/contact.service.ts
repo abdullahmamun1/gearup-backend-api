@@ -36,7 +36,11 @@ const createMessage = async (payload: ICreateContactMessagePayload) => {
       {
         to: created.email,
         template: "contactAutoReply",
-        payload: { name: created.name, message: created.message },
+        payload: {
+          name: created.name,
+          message: created.message,
+          locale: created.locale,
+        },
       },
     ]);
     return created;

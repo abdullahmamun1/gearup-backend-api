@@ -6,6 +6,8 @@ import { getValidatedQuery } from "../../middleware/validateRequest";
 import { IGetOrderQueryParams } from "../rental/rental.interface";
 import {
   IGetAdminGearQueryParams,
+  IGetAdminReviewsQueryParams,
+  IGetSubscribersQueryParams,
   IGetUsersQueryParams,
 } from "./admin.interface";
 import { categoryService } from "../category/category.service";
@@ -111,7 +113,61 @@ const deleteCategory = catchAsync(
   },
 );
 
+const getAllReviews = catchAsync(async (req: Request, res: Response) => {
+  const result = await adminService.getAllReviews(
+    getValidatedQuery<IGetAdminReviewsQueryParams>(req),
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Reviews retrieved successfully",
+    data: result,
+  });
+});
+
+const moderateReview = catchAsync(async (req: Request, res: Response) => {
+  const result = await adminService.moderateReview(
+    req.params.reviewId as string,
+    req.body.isHidden,
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: result.isHidden ? "Review hidden" : "Review restored",
+    data: result,
+  });
+});
+
+const setGearFeatured = catchAsync(async (req: Request, res: Response) => {
+  const result = await adminService.setGearFeatured(
+    req.params.gearId as string,
+    req.body.isFeatured,
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: result.isFeatured ? "Gear featured" : "Gear unfeatured",
+    data: result,
+  });
+});
+
+const getSubscribers = catchAsync(async (req: Request, res: Response) => {
+  const result = await adminService.getSubscribers(
+    getValidatedQuery<IGetSubscribersQueryParams>(req),
+  );
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: "Subscribers retrieved successfully",
+    data: result,
+  });
+});
+
 export const adminController = {
+  getAllReviews,
+  moderateReview,
+  setGearFeatured,
+  getSubscribers,
   getAllUsers,
   updateUserStatus,
   getAllGear,

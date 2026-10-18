@@ -1,3 +1,4 @@
+import { aiService } from "../ai/ai.service";
 import { prisma } from "../../lib/prisma";
 import { createError } from "../../utils/createError";
 import { IGetQueryParams } from "../provider/provider.interface";
@@ -61,6 +62,8 @@ const createReview = async (
       comment,
     },
   });
+  // Refresh the AI "what renters say" digest once there are enough reviews.
+  aiService.summarizeReviewsSoon(gearItemId);
   return review;
 };
 
@@ -75,6 +78,7 @@ const getReviewsForGear = async (
   const reviews = await prisma.review.findMany({
     where: {
       gearItemId,
+      isHidden: false,
     },
     skip,
     take: limit,
@@ -85,6 +89,7 @@ const getReviewsForGear = async (
   const stats = await prisma.review.aggregate({
     where: {
       gearItemId,
+      isHidden: false,
     },
     _avg: { rating: true },
     _count: { rating: true },

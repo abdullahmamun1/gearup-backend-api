@@ -1,4 +1,4 @@
-import { Role } from "../../../generated/prisma/enums";
+import { Locale, Role } from "../../../generated/prisma/enums";
 
 export type RegisterRole = Exclude<Role, "ADMIN">;
 
@@ -8,6 +8,7 @@ export interface ICreateUserPayload {
   password: string;
   phone?: string;
   role: RegisterRole;
+  locale?: Locale;
 }
 export interface ILoginPayload {
   email: string;
@@ -18,9 +19,18 @@ export interface IGoogleLoginPayload {
   codeVerifier: string;
   redirectUri: string;
   role?: RegisterRole;
+  locale?: Locale;
 }
 export interface IUpdateProfilePayload {
   name?: string;
   phone?: string;
   marketingEmails?: boolean;
+  locale?: Locale;
+  /** "" clears the text fields; null clears the location. */
+  avatarUrl?: string;
+  bio?: string;
+  city?: string;
+  area?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }

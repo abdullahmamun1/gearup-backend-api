@@ -1,0 +1,16 @@
+/// A chat message on one rental order, between its customer and provider.
+model Message {
+  id            String      @id @default(uuid())
+  rentalOrderId String
+  rentalOrder   RentalOrder @relation(fields: [rentalOrderId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User        @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  body          String
+  /// Set when the other side opens the thread.
+  readAt        DateTime?
+  createdAt     DateTime    @default(now())
+
+  @@index([rentalOrderId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}

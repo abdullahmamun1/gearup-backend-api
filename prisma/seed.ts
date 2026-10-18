@@ -48,6 +48,41 @@ const midnightUtc = (offsetDays: number) => {
 
 // ---------------------------------------------------------------- users
 
+/** Public profile + pickup point for the demo providers (approximate). */
+const PROVIDER_PROFILES: Record<
+  string,
+  { city: string; area: string; latitude: number; longitude: number; bio: string }
+> = {
+  provider1: {
+    city: "Sylhet",
+    area: "Zindabazar",
+    latitude: 24.8949,
+    longitude: 91.8687,
+    bio: "Camping and climbing kit for tea-garden treks and Ratargul trips. Everything is cleaned and checked after each rental.",
+  },
+  provider2: {
+    city: "Cox's Bazar",
+    area: "Kolatoli",
+    latitude: 21.4272,
+    longitude: 92.0058,
+    bio: "Beach and water gear a few minutes from the sea: kayaks, boards, snorkels and beach games.",
+  },
+  provider3: {
+    city: "Bandarban",
+    area: "Bandarban Sadar",
+    latitude: 22.1953,
+    longitude: 92.2184,
+    bio: "Hill-track trekking specialists. Tents, packs and stoves for Nilgiri, Keokradong and beyond.",
+  },
+  provider4: {
+    city: "Dhaka",
+    area: "Gulshan",
+    latitude: 23.7925,
+    longitude: 90.4078,
+    bio: "Team sports and cycling gear for weekend matches and city rides. Pickup near Gulshan 1.",
+  },
+};
+
 const USERS: { key: string; name: string; email: string; role: Role; phone?: string }[] = [
   { key: "admin", name: "GearUp Admin", email: "admin@gearup.com", role: Role.ADMIN },
   { key: "provider1", name: "Trail Base Sylhet", email: "provider1@gearup.com", role: Role.PROVIDER, phone: "+8801700000001" },
@@ -250,6 +285,15 @@ async function main() {
       },
     });
     userIds.set(user.key, row.id);
+
+    // Fill the demo profile once; never overwrite what a provider has set.
+    const profile = PROVIDER_PROFILES[user.key];
+    if (profile) {
+      await prisma.user.updateMany({
+        where: { id: row.id, city: null },
+        data: profile,
+      });
+    }
   }
 
   const categoryIds = new Map<string, string>();
