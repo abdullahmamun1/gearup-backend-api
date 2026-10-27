@@ -4,6 +4,7 @@ import {
   CancelReason,
   EmailStatus,
   Locale,
+  Role,
 } from "../../../generated/prisma/enums";
 import config from "../../config";
 import { prisma } from "../../lib/prisma";
@@ -195,8 +196,19 @@ const loadOrderForEmail = (db: Db, orderId: string) =>
     include: orderEmailInclude,
   });
 
+/** `ADMIN_EMAIL` if set, otherwise every admin account. */
+const adminRecipients = async () => {
+  if (config.admin_email) return [config.admin_email];
+  const admins = await prisma.user.findMany({
+    where: { role: Role.ADMIN },
+    select: { email: true },
+  });
+  return admins.map((admin) => admin.email);
+};
+
 export const emailService = {
   enqueue,
+  adminRecipients,
   dispatchDue,
   dispatchSoon,
   recoverStuck,

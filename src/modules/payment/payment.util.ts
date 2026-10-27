@@ -194,18 +194,72 @@ const handleSessionExpired = async (session: Stripe.Checkout.Session) => {
   });
 };
 
-/** Keeps refunds issued from the Stripe dashboard in sync. */
-const handleChargeRefunded = async (charge: Stripe.Charge) => {
+/** Copies Stripe's refunded total onto our payment row. */
+const syncRefundedAmount = async (charge: Stripe.Charge) => {
   const paymentIntentId = intentIdOf(charge.payment_intent);
   if (!paymentIntentId) return;
 
+  const refunded = charge.amount_refunded / 100;
   await prisma.payment.updateMany({
     where: { stripePaymentIntentId: paymentIntentId },
-    data: {
-      refundedAmount: charge.amount_refunded / 100,
-      refundedAt: new Date(),
-    },
+    data: { refundedAmount: refunded, refundedAt: refunded > 0 ? new Date() : null },
   });
+};
+
+/** Keeps refunds issued from the Stripe dashboard in sync. */
+const handleChargeRefunded = async (charge: Stripe.Charge) => {
+  await syncRefundedAmount(charge);
+};
+
+/**
+ * `refund.updated` / `refund.failed`: a refund we already counted can fail
+ * later (closed card, bank rejection) or be cancelled. Stripe then puts the
+ * money back on the charge, so re-read its refunded total and tell the
+ * admins: the customer hasn't been paid and needs refunding another way.
+ */
+const handleRefundUpdated = async (refund: Stripe.Refund) => {
+  if (refund.status !== "failed" && refund.status !== "canceled") return;
+  const chargeId =
+    typeof refund.charge === "string" ? refund.charge : refund.charge?.id;
+  if (!chargeId) return;
+
+  const charge = await stripe.charges.retrieve(chargeId);
+  await syncRefundedAmount(charge);
+
+  const paymentIntentId = intentIdOf(charge.payment_intent);
+  const payment = paymentIntentId
+    ? await prisma.payment.findFirst({
+        where: { stripePaymentIntentId: paymentIntentId },
+        include: { customer: { select: { name: true, email: true } } },
+      })
+    : null;
+  console.error(
+    `[stripe] refund ${refund.id} ${refund.status}`,
+    refund.failure_reason ?? "",
+    payment ? `order ${payment.rentalOrderId}` : "no matching payment",
+  );
+  if (!payment) return;
+
+  const recipients = await emailService.adminRecipients();
+  await emailService.enqueue(
+    prisma,
+    recipients.map((to) => ({
+      to,
+      template: "refundFailed" as const,
+      payload: {
+        orderId: payment.rentalOrderId,
+        customerName: payment.customer.name,
+        customerEmail: payment.customer.email,
+        amount: refund.amount / 100,
+        status: refund.status ?? "failed",
+        reason: refund.failure_reason ?? null,
+        url: emailService.appUrl("/dashboard/admin/rentals"),
+      },
+      // Stripe sends both refund.updated and refund.failed: alert once.
+      dedupeKey: `refund-failed:${refund.id}:${to}`,
+    })),
+  );
+  emailService.dispatchSoon();
 };
 
 export const paymentUtils = {
@@ -214,4 +268,5 @@ export const paymentUtils = {
   handleSessionCompleted,
   handleSessionExpired,
   handleChargeRefunded,
+  handleRefundUpdated,
 };

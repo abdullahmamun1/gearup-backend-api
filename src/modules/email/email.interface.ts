@@ -69,6 +69,17 @@ export interface IEmailPayloads {
     locale?: Locale;
   };
   newsletterConfirm: { url: string; unsubscribeUrl: string; locale?: Locale };
+  /** To admins: Stripe couldn't complete a refund, so the customer wasn't paid. */
+  refundFailed: {
+    orderId: string;
+    customerName: string;
+    customerEmail: string;
+    amount: number;
+    /** Stripe's refund status: "failed" or "canceled". */
+    status: string;
+    reason?: string | null;
+    url: string;
+  };
 }
 
 export type EmailTemplate = keyof IEmailPayloads;

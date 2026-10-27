@@ -18,13 +18,16 @@ import { emailService } from "../email/email.service";
 import { authTokens } from "./auth.tokens";
 
 const issueTokens = (
-  user: Pick<UserModel, "id" | "name" | "email" | "role">,
+  user: Pick<UserModel, "id" | "name" | "email" | "role" | "avatarUrl">,
 ) => {
+  // The avatar rides along so the frontend's menus can show it without an
+  // extra request. A new one needs a fresh token (POST /refresh-token).
   const jwtPayload = {
     id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,
+    avatarUrl: user.avatarUrl ?? null,
   };
 
   return {

@@ -301,6 +301,23 @@ const enBuilders: Builders = {
     note: "Reply directly to the sender's address above.",
   }),
 
+  refundFailed: ({ orderId, customerName, customerEmail, amount, status, reason, url }) => ({
+    subject: `Refund ${status === "canceled" ? "cancelled" : "failed"}: order ${orderId.slice(0, 8)}`,
+    preheader: `${formatMoney(amount)} didn't reach ${customerName}.`,
+    heading: "A refund didn't go through",
+    paragraphs: [
+      `Stripe couldn't return ${formatMoney(amount)} to the customer, so the money is back in the GearUp account. Refund them another way, or contact them for new card details.`,
+    ],
+    rows: [
+      ["Order", orderId.slice(0, 8)],
+      ["Customer", `${customerName} (${customerEmail})`],
+      ["Amount", formatMoney(amount)],
+      ["Stripe status", status],
+      ...(reason ? ([["Reason", reason]] as [string, string][]) : []),
+    ],
+    button: { label: "Open the order", url },
+  }),
+
   contactAutoReply: ({ name, message }) => ({
     subject: "We got your message",
     preheader: "We usually reply within a day.",

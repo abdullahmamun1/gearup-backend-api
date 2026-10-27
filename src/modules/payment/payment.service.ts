@@ -148,6 +148,10 @@ const handleWebhookEvent = async (payload: Buffer, signature: string) => {
     case "charge.refunded":
       await paymentUtils.handleChargeRefunded(event.data.object);
       break;
+    case "refund.updated":
+    case "refund.failed":
+      await paymentUtils.handleRefundUpdated(event.data.object);
+      break;
   }
 
   return { received: true };

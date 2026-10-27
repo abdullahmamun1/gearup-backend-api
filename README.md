@@ -311,7 +311,7 @@ Everything goes through one helper, `generateJson({ system, contents, schema })`
   CANCELLED                    CANCELLED                CANCELLED (full refund until 24 h before the start day)
   ```
   Both deadlines end no later than the end of the start day. Stale orders expire lazily before order reads (at most once a minute) and in the daily job.
-- **Payments:** `POST /payments/create` opens a Stripe Checkout session with two line items (rental and deposit), or reuses a pending one. The webhook handles `checkout.session.completed`, `checkout.session.expired` and `charge.refunded`.
+- **Payments:** `POST /payments/create` opens a Stripe Checkout session with two line items (rental and deposit), or reuses a pending one. The webhook handles `checkout.session.completed`, `checkout.session.expired`, `charge.refunded` (keeps the refunded amount in sync, including refunds made in the Stripe Dashboard) and `refund.updated` / `refund.failed` (a refund that fails later, for example to an expired card, is taken back off the payment and the admins get an email to refund the customer another way).
 - **Return and deposit:** on return the provider marks the condition. OK refunds the deposit. Damage moves it to `CLAIMED`, and an admin settles it as `KEPT`, `PARTIALLY_REFUNDED` or `REFUNDED`. The refund runs first, so a failed refund leaves the claim open.
 - **Messages:** only the order's customer and provider can read or write. Each message queues at most one email an hour per conversation.
 - **Daily cron** (02:00 UTC, 08:00 in Dhaka): expire stale orders, queue pickup reminders for tomorrow's rentals and review requests for recent returns, retry the email outbox, refresh up to 10 review summaries and purge old tokens. Every step is safe to repeat.
@@ -375,7 +375,7 @@ prisma/
 The project deploys to Vercel through `vercel.json`, which sends every request to `dist/server.js`.
 
 1. Add every variable from `.env.example` to the Vercel project. Set `APP_URL` to the deployed frontend URL, and use the same JWT secrets as the frontend.
-2. In the Stripe Dashboard, add a webhook endpoint for `https://<your-api>/api/payments/confirm` with the events `checkout.session.completed`, `checkout.session.expired` and `charge.refunded`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
+2. In the Stripe Dashboard, add a webhook endpoint for `https://<your-api>/api/payments/confirm` with the events `checkout.session.completed`, `checkout.session.expired`, `charge.refunded`, `refund.updated` and `refund.failed`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`.
 3. Run `npx prisma migrate deploy` against the production database.
 4. Optional: run `npm run db:seed` once against production for the demo data.
 5. The daily cron is registered in `vercel.json`. Vercel sends `CRON_SECRET` with it automatically.

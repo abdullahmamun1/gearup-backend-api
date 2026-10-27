@@ -308,6 +308,23 @@ export const bnBuilders: Builders = {
     note: "উপরের ঠিকানায় সরাসরি প্রেরককে উত্তর দিন।",
   }),
 
+  refundFailed: ({ orderId, customerName, customerEmail, amount, status, reason, url }) => ({
+    subject: `রিফান্ড ${status === "canceled" ? "বাতিল হয়েছে" : "ব্যর্থ হয়েছে"}: অর্ডার ${orderId.slice(0, 8)}`,
+    preheader: `${f.money(amount)} ${customerName}-এর কাছে পৌঁছায়নি।`,
+    heading: "একটি রিফান্ড সম্পন্ন হয়নি",
+    paragraphs: [
+      `Stripe গ্রাহককে ${f.money(amount)} ফেরত দিতে পারেনি, তাই টাকাটা GearUp অ্যাকাউন্টে ফিরে এসেছে। অন্য উপায়ে রিফান্ড দিন, অথবা নতুন কার্ডের তথ্যের জন্য গ্রাহকের সঙ্গে যোগাযোগ করুন।`,
+    ],
+    rows: [
+      ["অর্ডার", orderId.slice(0, 8)],
+      ["গ্রাহক", `${customerName} (${customerEmail})`],
+      ["পরিমাণ", f.money(amount)],
+      ["Stripe স্ট্যাটাস", status],
+      ...(reason ? ([["কারণ", reason]] as [string, string][]) : []),
+    ],
+    button: { label: "অর্ডারটি খুলুন", url },
+  }),
+
   contactAutoReply: ({ name, message }) => ({
     subject: "আপনার মেসেজ আমরা পেয়েছি",
     preheader: "আমরা সাধারণত এক দিনের মধ্যে উত্তর দিই।",
